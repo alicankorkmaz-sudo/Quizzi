@@ -126,7 +126,7 @@ class GameService {
         }
 
         if (correctPlayer != null) {
-            // İmleç pozisyonunu güncelle,
+            // İmleç pozisyonunu güncelle
             val currentPosition = room.cursorPosition
             val movement = if (room.players.indexOf(correctPlayer) == 0) -0.1f else 0.1f
             val newPosition = currentPosition + movement
@@ -136,12 +136,31 @@ class GameService {
                 else -> newPosition
             }
 
+            // Son cursor pozisyonunu gönder
+            val cursorUpdate = GameMessage.GameUpdate(
+                gameState = room.gameState,
+                cursorPosition = room.cursorPosition,
+                currentQuestion = currentQuestions[roomId]?.toClientQuestion()
+            )
+            broadcastToRoom(roomId, json.encodeToString(GameMessage.serializer(), cursorUpdate))
+
             if (room.cursorPosition <= 0f || room.cursorPosition >= 1f) {
+                // Oyun bitti
                 room.gameState = GameState.FINISHED
+
+                // Son durum güncellemesi
+                val finalUpdate = GameMessage.GameUpdate(
+                    gameState = GameState.FINISHED,
+                    cursorPosition = room.cursorPosition,
+                    currentQuestion = null
+                )
+                broadcastToRoom(roomId, json.encodeToString(GameMessage.serializer(), finalUpdate))
+
+                // Kazanan bilgisi
                 val gameOverMessage = GameMessage.GameOver(winner = correctPlayer.name)
                 broadcastToRoom(roomId, json.encodeToString(GameMessage.serializer(), gameOverMessage))
 
-                // Odayı temizle
+                // Odayı temizlemeden önce biraz bekle
                 delay(5000)
                 cleanupRoom(roomId)
             } else {
