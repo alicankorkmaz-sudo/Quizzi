@@ -8,8 +8,6 @@ import io.ktor.server.routing.*
 import io.ktor.server.websocket.*
 import io.ktor.websocket.*
 import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.jsonObject
-import kotlinx.serialization.json.jsonPrimitive
 import service.ActiveRoomsResponse
 import service.GameService
 import java.time.Duration
@@ -41,52 +39,36 @@ fun Application.module() {
 
     routing {
         get("/") {
-            call.respondText("models.Flag Quiz Game Server Running!")
+            call.respondText("Bayrak Quiz Oyun Sunucusu Çalışıyor!")
+        }
+
+        webSocket("/game") {
+            val playerId = UUID.randomUUID().toString()
+            
+            try {
+                gameService.registerPlayerSession(playerId, this)
+                
+                for (frame in incoming) {
+                    when (frame) {
+                        is Frame.Text -> {
+                            val text = frame.readText()
+                            gameService.handleMessage(playerId, text)
+                        }
+                        is Frame.Close -> {
+                            gameService.handleDisconnect(playerId)
+                        }
+                        else -> {}
+                    }
+                }
+            } catch (e: Exception) {
+                println("Bağlantı hatası: ${e.message}")
+                gameService.handleDisconnect(playerId)
+            }
         }
 
         get("/rooms") {
             val rooms = gameService.getActiveRooms()
             call.respond(ActiveRoomsResponse(rooms))
-        }
-
-        webSocket("/game") {
-            val playerId = UUID.randomUUID().toString()
-            println("New WebSocket connection: $playerId")
-
-            try {
-                gameService.registerPlayerSession(playerId, this)
-
-                for (frame in incoming) {
-                    when (frame) {
-                        is Frame.Text -> {
-                            val text = frame.readText()
-                            // Reconnect mesajını kontrol et
-                            val jsonElement = Json.parseToJsonElement(text)
-                            if (jsonElement.jsonObject["type"]?.jsonPrimitive?.content == "Reconnect") {
-                                val oldPlayerId = jsonElement.jsonObject["playerId"]?.jsonPrimitive?.content
-                                if (oldPlayerId != null) {
-                                    gameService.handleReconnect(oldPlayerId, this)
-                                }
-                            } else {
-                                gameService.handleMessage(playerId, text)
-                            }
-                        }
-
-                        is Frame.Close -> {
-                            println("WebSocket closed for player $playerId")
-                            gameService.handleDisconnect(playerId)
-                        }
-
-                        else -> {}
-                    }
-                }
-            } catch (e: Exception) {
-                println("Error in WebSocket connection: ${e.message}")
-                e.printStackTrace()
-            } finally {
-                println("WebSocket connection terminated for player $playerId")
-                gameService.handleDisconnect(playerId)
-            }
         }
     }
 }
