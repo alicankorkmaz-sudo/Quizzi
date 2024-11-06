@@ -83,7 +83,7 @@ sealed class GameMessage {
     @Serializable
     @SerialName("ConnectionState")
     data class ConnectionState(
-        val type: ConnectionStateType,
+        val connectionStateType: ConnectionStateType,
         val playerId: String,
         val playerName: String? = null,
         val reason: String? = null
@@ -96,5 +96,11 @@ sealed class GameMessage {
         RECONNECT_SUCCESS,
         RECONNECT_FAILED
     }
+
+    @Serializable
+    @SerialName("Error")
+    data class Error(
+        val message: String
+    ) : GameMessage()
 }
 

@@ -44,19 +44,21 @@ fun Application.module() {
 
         webSocket("/game") {
             val playerId = UUID.randomUUID().toString()
-            
+
             try {
                 gameService.registerPlayerSession(playerId, this)
-                
+
                 for (frame in incoming) {
                     when (frame) {
                         is Frame.Text -> {
                             val text = frame.readText()
                             gameService.handleMessage(playerId, text)
                         }
+
                         is Frame.Close -> {
                             gameService.handleDisconnect(playerId)
                         }
+
                         else -> {}
                     }
                 }

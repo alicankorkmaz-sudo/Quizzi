@@ -8,6 +8,7 @@ group = "com.alicankorkmaz"
 version = "1.0-SNAPSHOT"
 
 repositories {
+    google()
     mavenCentral()
 }
 
@@ -29,6 +30,7 @@ dependencies {
 
     // Logging
     implementation("ch.qos.logback:logback-classic:$logback_version")
+    implementation("org.slf4j:slf4j-api:2.0.9")
 
     // Testing
     testImplementation(kotlin("test"))
