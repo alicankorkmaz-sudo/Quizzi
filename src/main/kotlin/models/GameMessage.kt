@@ -66,6 +66,7 @@ sealed class GameMessage {
     @Serializable
     @SerialName("AnswerResult")
     data class AnswerResult(
+        val playerId: String,
         val playerName: String,
         val answer: String,
         val correct: Boolean

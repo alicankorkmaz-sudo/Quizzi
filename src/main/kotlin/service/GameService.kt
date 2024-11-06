@@ -370,6 +370,7 @@ class GameService {
 
         // Sonucu yayınla
         val result = GameMessage.AnswerResult(
+            playerId = player.id,
             playerName = player.name,
             answer = answer,
             correct = isCorrect
@@ -388,11 +389,12 @@ class GameService {
             // Yanlış cevap kaydı
             gameStateManager.recordWrongAnswer(roomId, player.id)
 
-            // İki oyuncu da yanlış cevap verdiyse
+            // İki oyuncu da yanlış cevap verdiyse veya süre bittiyse
             if (gameStateManager.bothPlayersAnsweredWrong(roomId, room.players.size)) {
                 gameStateManager.cancelTimer(roomId)
                 handleRoundEnd(roomId)
             }
+            // Yanlış cevap durumunda diğer oyuncunun cevap verme şansı devam eder
         }
     }
 }
