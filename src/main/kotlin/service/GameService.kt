@@ -23,6 +23,7 @@ class GameService {
         const val RECONNECT_TIMEOUT_SECONDS = 30L
         const val GAME_OVER_DELAY_SECONDS = 5L
         const val COUNTDOWN_SECONDS = 3L
+        const val ROUND_RESULT_DISPLAY_TIME = 2000L // 2 saniye
     }
 
     suspend fun registerPlayerSession(playerId: String, session: DefaultWebSocketSession) {
@@ -170,8 +171,28 @@ class GameService {
             val answers = gameStateManager.getAnswers(roomId) ?: emptyMap()
             processUnansweredPlayers(room, answers)
 
-            // Doğru cevabı yayınla
-            broadcastCorrectAnswer(roomId, question)
+            // Round sonucunu yayınla
+            val correctAnswer = question.correctAnswer
+            val winnerPlayer = answers.entries
+                .find { (_, answer) -> answer.equals(correctAnswer, ignoreCase = true) }
+                ?.let { entry ->
+                    room.players.find { it.id == entry.key }
+                }
+
+            broadcastToRoom(
+                roomId,
+                json.encodeToString(
+                    GameMessage.serializer(),
+                    GameMessage.RoundResult(
+                        correctAnswer = correctAnswer,
+                        winnerPlayerId = winnerPlayer?.id,
+                        winnerPlayerName = winnerPlayer?.name
+                    )
+                )
+            )
+
+            // Kısa bir bekleme süresi
+            delay(ROUND_RESULT_DISPLAY_TIME)
 
             // Oyun bitip bitmediğini kontrol et
             if (room.cursorPosition <= 0f || room.cursorPosition >= 1f) {
@@ -186,9 +207,6 @@ class GameService {
                 delay(GAME_OVER_DELAY_SECONDS * 1000)
                 cleanupRoom(roomId)
             } else {
-                // Kısa bir bekleme süresi
-                delay(NEXT_QUESTION_DELAY_MS)
-                // Yeni tura geç
                 startNewRound(roomId)
             }
         } catch (e: Exception) {
