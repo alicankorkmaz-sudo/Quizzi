@@ -1,3 +1,4 @@
+import handler.MessageHandler
 import io.ktor.serialization.kotlinx.json.*
 import io.ktor.server.application.*
 import io.ktor.server.engine.*
@@ -8,12 +9,14 @@ import io.ktor.server.routing.*
 import io.ktor.server.websocket.*
 import io.ktor.websocket.*
 import kotlinx.serialization.json.Json
-import service.ActiveRoomsResponse
-import service.GameService
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
+import router.playerRoutes
+import router.roomRoutes
+import service.PlayerManagerService
+import service.RoomManagerService
+import service.SessionManagerService
 import java.time.Duration
-import java.util.*
-
-private val gameService = GameService()
 
 fun main() {
     embeddedServer(Netty, port = System.getenv("PORT")?.toInt() ?: 8080) {
@@ -27,6 +30,7 @@ fun Application.module() {
         json(Json {
             prettyPrint = true
             isLenient = true
+            ignoreUnknownKeys = true
         })
     }
 
@@ -39,38 +43,57 @@ fun Application.module() {
 
     routing {
         get("/") {
-            call.respondText("Bayrak Quiz Oyun Sunucusu Çalışıyor!")
+            call.respondText("models.Flag Quiz Game Server Running!")
         }
 
+        roomRoutes()
+        playerRoutes()
+
         webSocket("/game") {
-            val playerId = UUID.randomUUID().toString()
+            val playerId = call.parameters["playerId"]//call.request.headers["playerId"]
+
+            if (playerId == null) {
+                close(CloseReason(CloseReason.Codes.VIOLATED_POLICY, "Missing playerId"))
+                return@webSocket
+            }
+            println("New WebSocket connection: $playerId")
+
+            PlayerManagerService.INSTANCE.getPlayer(playerId) ?: close(CloseReason(CloseReason.Codes.VIOLATED_POLICY, "Missing playerId"))
 
             try {
-                gameService.registerPlayerSession(playerId, this)
+                SessionManagerService.INSTANCE.addPlayerToSession(playerId, this)
 
                 for (frame in incoming) {
                     when (frame) {
                         is Frame.Text -> {
                             val text = frame.readText()
-                            gameService.handleMessage(playerId, text)
+                            // Reconnect mesajını kontrol et
+                            val jsonElement = Json.parseToJsonElement(text)
+                            if (jsonElement.jsonObject["type"]?.jsonPrimitive?.content == "Reconnect") {
+                                val oldPlayerId = jsonElement.jsonObject["playerId"]?.jsonPrimitive?.content
+                                if (oldPlayerId != null) {
+                                    RoomManagerService.INSTANCE.handleReconnect(oldPlayerId, this)
+                                }
+                            } else {
+                                MessageHandler.INSTANCE.handleMessage(playerId, text)
+                            }
                         }
 
                         is Frame.Close -> {
-                            gameService.handleDisconnect(playerId)
+                            println("WebSocket closed for player $playerId")
+                            MessageHandler.INSTANCE.handleDisconnect(playerId)
                         }
 
                         else -> {}
                     }
                 }
             } catch (e: Exception) {
-                println("Bağlantı hatası: ${e.message}")
-                gameService.handleDisconnect(playerId)
+                println("Error in WebSocket connection: ${e.message}")
+                e.printStackTrace()
+            } finally {
+                println("WebSocket connection terminated for player $playerId")
+                MessageHandler.INSTANCE.handleDisconnect(playerId)
             }
-        }
-
-        get("/rooms") {
-            val rooms = gameService.getActiveRooms()
-            call.respond(ActiveRoomsResponse(rooms))
         }
     }
 }

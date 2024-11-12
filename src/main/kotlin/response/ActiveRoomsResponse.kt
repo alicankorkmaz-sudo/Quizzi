@@ -1,9 +1,9 @@
-package service
+package response
 
 import kotlinx.serialization.Serializable
-import models.ActiveRoom
+import dto.GameRoomDTO
 
 @Serializable
 data class ActiveRoomsResponse(
-    val rooms: List<ActiveRoom>
-) 
+    val rooms: List<GameRoomDTO>
+)
