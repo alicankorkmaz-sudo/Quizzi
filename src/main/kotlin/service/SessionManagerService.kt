@@ -10,7 +10,6 @@ import java.util.*
  */
 class SessionManagerService private constructor() {
     companion object {
-
         val INSTANCE: SessionManagerService by lazy(LazyThreadSafetyMode.SYNCHRONIZED) { SessionManagerService() }
     }
 

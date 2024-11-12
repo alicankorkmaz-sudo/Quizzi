@@ -15,7 +15,6 @@ import java.util.*
  */
 class RoomManagerService private constructor() {
     companion object {
-
         val INSTANCE: RoomManagerService by lazy(LazyThreadSafetyMode.SYNCHRONIZED) { RoomManagerService() }
     }
 
@@ -58,18 +57,6 @@ class RoomManagerService private constructor() {
     }
 
     private fun cleanupRoom(room: GameRoom) {
-        // Odadaki oyunculara bildir
-        room.players.forEach { player ->
-            SessionManagerService.INSTANCE.getPlayerSession(player.id)?.let { session ->
-                CoroutineScope(Dispatchers.IO).launch {
-                    val message = ServerSocketMessage.RoomClosed(reason = "Player disconnected for too long")
-                    session.send(Frame.Text(json.encodeToString(message)))
-                }
-            }
-            // Oyuncu verilerini temizle
-            SessionManagerService.INSTANCE.removePlayerSession(player.id)
-            disconnectedPlayers.remove(player.id)
-        }
         // Oda verilerini temizle
         room.rounds.last().timer?.cancel()
         rooms.remove(room.id)
@@ -86,16 +73,13 @@ class RoomManagerService private constructor() {
 
         gameScope.launch {
             println("Starting countdown for room $roomId")
-            // Geri sayım başlat
             room.roomState = RoomState.COUNTDOWN
             broadcastRoomState(roomId)
 
             println("Waiting 3 seconds...")
-            // 3 saniye bekle
             delay(3000)
 
             println("Starting actual game for room $roomId")
-            // Oyunu başlat
             room.roomState = RoomState.PLAYING
             nextQuestion(room)
         }
@@ -162,23 +146,29 @@ class RoomManagerService private constructor() {
         val room = rooms[roomId] ?: return
         val answer = room.rounds.last().answer
         val answeredPlayerId = room.rounds.last().answeredPlayer?.id
-
         //TODO: gameleri yoneten bir yapi kurulmali
         val resistanceGame = room.game!! as ResistanceGame
 
         room.rounds.last().timer?.cancel()
 
-        room.game?.processAnswer(room.players, answeredPlayerId, answer)
+        val isCorrect = room.game!!.processAnswer(room.players, answeredPlayerId, answer)
 
         if (resistanceGame.cursorPosition <= 0f || resistanceGame.cursorPosition >= 1f) {
             room.roomState = RoomState.FINISHED
+            broadcastRoomState(roomId)
             val gameOverMessage = ServerSocketMessage.GameOver(winnerPlayerId = room.rounds.last().answeredPlayer?.id!!)
             broadcastToRoom(roomId, gameOverMessage)
 
             delay(5000)
             cleanupRoom(room)
         } else {
-            delay(5000)
+            val roundResult = ServerSocketMessage.RoundResult(
+                correctAnswer = resistanceGame.currentQuestion!!.answer,
+                winnerPlayerId = if (isCorrect) room.rounds.last().answeredPlayer?.id!! else null
+            )
+            broadcastToRoom(roomId, roundResult)
+
+            if (isCorrect) delay(5000)
             nextQuestion(room)
         }
     }
@@ -215,7 +205,6 @@ class RoomManagerService private constructor() {
         )
         broadcastToRoom(roomId, answerResult)
 
-        // Doğru cevap verildiyse eli hemen sonlandır
         if (answer == question.answer) {
             endRound(roomId)
         }
@@ -279,13 +268,25 @@ class RoomManagerService private constructor() {
                         delay(30000)
                         if (disconnectedPlayers.containsKey(playerId)) {
                             println("Player $playerId did not reconnect within 30 seconds, cleaning up room $roomId")
-                            cleanupRoom(room)
+                            // Odadaki oyunculara bildir
+                            room.players.forEach { player ->
+                                SessionManagerService.INSTANCE.getPlayerSession(player.id)?.let { session ->
+                                    CoroutineScope(Dispatchers.IO).launch {
+                                        val message = ServerSocketMessage.RoomClosed(reason = "Player disconnected for too long")
+                                        session.send(Frame.Text(json.encodeToString(message)))
+                                    }
+                                }
+                                // Oyuncu verilerini temizle
+                                SessionManagerService.INSTANCE.removePlayerSession(player.id)
+                                disconnectedPlayers.remove(player.id)
+                            }
+                            // Oda verilerini temizle
+                            room.rounds.last().timer?.cancel()
+                            rooms.remove(room.id)
                         }
                     }
                 }
             }
         }
     }
-
-
 }

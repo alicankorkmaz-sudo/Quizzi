@@ -8,7 +8,6 @@ import java.util.*
  */
 class PlayerManagerService private constructor() {
     companion object {
-
         val INSTANCE: PlayerManagerService by lazy(LazyThreadSafetyMode.SYNCHRONIZED) { PlayerManagerService() }
     }
 
