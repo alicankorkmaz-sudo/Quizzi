@@ -1,5 +1,6 @@
 package model
 
+import dto.QuestionDTO
 import kotlinx.serialization.Serializable
 
 @Serializable
@@ -9,18 +10,11 @@ data class Question(
     val content: String,
     val options: List<Option>,
     val answer: Int
-)
+) {
+    fun toDTO() = QuestionDTO(
+        imageUrl = imageUrl,
+        content = content,
+        options = options
+    )
+}
 
-@Serializable
-data class ClientQuestion(
-    val imageUrl: String?,
-    val content: String,
-    val options: List<Option>
-)
-
-// Extension function for easy conversion
-fun Question.toClientQuestion() = ClientQuestion(
-    imageUrl = imageUrl,
-    content = content,
-    options = options
-) 

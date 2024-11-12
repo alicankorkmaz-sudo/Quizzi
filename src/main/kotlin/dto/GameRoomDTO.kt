@@ -1,10 +1,10 @@
-package response
+package dto
 
 import kotlinx.serialization.Serializable
 import model.RoomState
 
 @Serializable
-data class ActiveRoom(
+data class GameRoomDTO(
     val id: String,
     val playerCount: Int,
     val roomState: RoomState,

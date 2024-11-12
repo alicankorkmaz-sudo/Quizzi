@@ -3,7 +3,7 @@ package response
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonClassDiscriminator
-import model.ClientQuestion
+import model.QuestionDTO
 import model.Player
 import model.RoomState
 
@@ -34,7 +34,7 @@ sealed class ServerSocketMessage() {
         val state: RoomState,
         val cursorPosition: Float,
         val timeRemaining: Long? = null,
-        val currentQuestion: ClientQuestion? = null
+        val currentQuestion: QuestionDTO? = null
     ) : ServerSocketMessage()
 
     @Serializable

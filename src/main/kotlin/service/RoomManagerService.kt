@@ -5,7 +5,7 @@ import kotlinx.coroutines.*
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import model.*
-import response.ActiveRoom
+import dto.GameRoomDTO
 import response.DisconnectedPlayer
 import response.ServerSocketMessage
 import java.util.*
@@ -94,7 +94,7 @@ class RoomManagerService private constructor() {
             players = room.players,
             state = room.roomState,
             cursorPosition = resistanceGame?.cursorPosition ?: 0.5f,
-            currentQuestion = room.game?.currentQuestion?.toClientQuestion()
+            currentQuestion = room.game?.currentQuestion?.toDTO()
         )
         broadcastToRoom(roomId, gameUpdate)
     }
@@ -109,7 +109,7 @@ class RoomManagerService private constructor() {
             state = RoomState.PLAYING,
             cursorPosition = resistanceGame?.cursorPosition ?: 0.5f,
             timeRemaining = room.game!!.getRoundTime(),
-            currentQuestion = question.toClientQuestion()
+            currentQuestion = question.toDTO()
         )
 
         broadcastToRoom(room.id, gameUpdate)
@@ -180,9 +180,9 @@ class RoomManagerService private constructor() {
         SessionManagerService.INSTANCE.broadcastToPlayers(playerIds, message)
     }
 
-    fun getActiveRooms(): List<ActiveRoom> {
+    fun getActiveRooms(): List<GameRoomDTO> {
         return rooms.map { (id, room) ->
-            ActiveRoom(
+            GameRoomDTO(
                 id = id,
                 playerCount = room.players.size,
                 roomState = room.roomState,
