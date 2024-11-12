@@ -4,7 +4,7 @@ plugins {
     application
 }
 
-group = "com.alicankorkmaz"
+group = "com.astroturf"
 version = "1.0-SNAPSHOT"
 
 repositories {
@@ -37,7 +37,7 @@ dependencies {
 }
 
 application {
-    mainClass.set("com.flagquiz.ApplicationKt")
+    mainClass.set("ApplicationKt")
 }
 
 tasks {

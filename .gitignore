@@ -48,4 +48,4 @@ bin/
 ### Env Files ###
 .env
 *.env
-/logs/flagquiz.log
+/logs/quizzi.log
