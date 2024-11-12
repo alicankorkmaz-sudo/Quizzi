@@ -12,7 +12,7 @@ abstract class Game (
     var currentQuestion: Question? = null
 ) {
     abstract fun nextQuestion() : Question
-    abstract fun processAnswer(answeredPlayerId: String?, answer: String?)
+    abstract fun processAnswer(answeredPlayerId: String?, answer: Int?)
 
     abstract fun getRoundTime() : Long
 

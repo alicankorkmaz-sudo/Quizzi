@@ -1,6 +1,6 @@
 package model
 
-import data.FlagDatabase
+import data.QuestionDatabase
 
 /**
  * @author guvencenanguvenal
@@ -16,12 +16,12 @@ class ResistanceGame(
 
     private val MAX_PLAYERS = 2
     override fun nextQuestion(): Question {
-        currentQuestion = FlagDatabase.getRandomQuestion()
+        currentQuestion = QuestionDatabase.getRandomQuestion()
         return currentQuestion!!
     }
 
-    override fun processAnswer(answeredPlayerId: String?, answer: String?) {
-        val correctAnswer = answer == currentQuestion?.correctAnswer
+    override fun processAnswer(answeredPlayerId: String?, answer: Int?) {
+        val correctAnswer = answer == currentQuestion?.answer
 
         if (correctAnswer) {
             val correctPlayer = players.find { p ->

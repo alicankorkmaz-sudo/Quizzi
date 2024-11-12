@@ -39,7 +39,7 @@ sealed class ServerSocketMessage() {
     @Serializable
     @SerialName("TimeUp")
     data class TimeUp(
-        val correctAnswer: String
+        val correctAnswer: Int
     ) : ServerSocketMessage()
 
     @Serializable
@@ -52,7 +52,7 @@ sealed class ServerSocketMessage() {
     @SerialName("AnswerResult")
     data class AnswerResult(
         val playerId: String,
-        val answer: String,
+        val answer: Int,
         val correct: Boolean
     ) : ServerSocketMessage()
 

@@ -145,8 +145,12 @@ class RoomManagerService private constructor() {
                 delay(1000)
                 // Süre doldu
                 room.rounds.last().answer = null
+
+                // Süre doldu mesajı
+                val timeUpMessage = ServerSocketMessage.TimeUp(correctAnswer = room.game?.currentQuestion?.answer!!)
+                broadcastToRoom(roomId, timeUpMessage)
+
                 endRound(roomId)
-                nextRound(room)
             } catch (e: CancellationException) {
                 // Timer iptal edildi
             }
@@ -160,15 +164,10 @@ class RoomManagerService private constructor() {
 
     private suspend fun endRound(roomId: String) {
         val room = rooms[roomId] ?: return
-        val question = room.game!!.currentQuestion ?: return
         val answer = room.rounds.last().answer
         val answeredPlayerId = room.rounds.last().answeredPlayer?.id
 
         room.rounds.last().timer?.cancel()
-
-        // Süre doldu mesajı
-        val timeUpMessage = ServerSocketMessage.TimeUp(correctAnswer = question.correctAnswer)
-        broadcastToRoom(roomId, timeUpMessage)
 
         room.game?.processAnswer(answeredPlayerId, answer)
 
@@ -181,8 +180,7 @@ class RoomManagerService private constructor() {
             delay(5000)
             cleanupRoom(room)
         } else {
-            // Yeni soruya geç
-            delay(3000)
+            nextRound(room)
             nextQuestion(room)
         }
     }
@@ -205,7 +203,7 @@ class RoomManagerService private constructor() {
         }
     }
 
-    suspend fun playerAnswered(roomId: String, playerId: String, answer: String) {
+    suspend fun playerAnswered(roomId: String, playerId: String, answer: Int) {
         val room = rooms[roomId] ?: return
         val question = room.game!!.currentQuestion ?: return
         val player = room.players.find { it.id == playerId } ?: return
@@ -216,13 +214,13 @@ class RoomManagerService private constructor() {
         val answerResult = ServerSocketMessage.AnswerResult(
             playerId = player.id,
             answer = answer,
-            correct = answer == question.correctAnswer
+            correct = answer == question.answer
         )
 
         broadcastToRoom(roomId, answerResult)
 
         // Doğru cevap verildiyse eli hemen sonlandır
-        if (answer == question.correctAnswer) {
+        if (answer == question.answer) {
             room.rounds.last().timer?.cancel()
             endRound(roomId)
         }

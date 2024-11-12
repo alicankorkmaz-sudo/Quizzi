@@ -18,7 +18,7 @@ class MessageHandler private constructor() {
 
     suspend fun handleMessage(playerId: String, message: String) {
         try {
-            when (val gameMessage = json.decodeFromString<ClientSocketMessage>(message)) {
+            when (val clientMessage = json.decodeFromString<ClientSocketMessage>(message)) {
                 is ClientSocketMessage.CreateRoom -> {
                     val roomId = RoomManagerService.INSTANCE.createRoom(playerId)
                     val response = ServerSocketMessage.RoomCreated(
@@ -28,24 +28,28 @@ class MessageHandler private constructor() {
                 }
 
                 is ClientSocketMessage.JoinRoom -> {
-                    val success = RoomManagerService.INSTANCE.joinRoom(playerId, gameMessage.roomId)
+                    val success = RoomManagerService.INSTANCE.joinRoom(playerId, clientMessage.roomId)
                     val response = ServerSocketMessage.JoinedRoom(
-                        gameMessage.roomId,
+                        clientMessage.roomId,
                         success = success
                     )
                     SessionManagerService.INSTANCE.broadcastToPlayers(mutableListOf(playerId), response)
                     if (success) {
-                        RoomManagerService.INSTANCE.startGame(gameMessage.roomId)
+                        RoomManagerService.INSTANCE.startGame(clientMessage.roomId)
                     }
+                }
+
+                is ClientSocketMessage.PlayerReady -> {
+
                 }
 
                 is ClientSocketMessage.PlayerAnswer -> {
                     val roomId = RoomManagerService.INSTANCE.getRoomIdFromPlayerId(playerId)
-                    RoomManagerService.INSTANCE.playerAnswered(roomId, playerId, gameMessage.answer)
+                    RoomManagerService.INSTANCE.playerAnswered(roomId, playerId, clientMessage.answer)
                 }
 
                 else -> {
-                    println("Unexpected message type received: ${gameMessage::class.simpleName}")
+                    println("Unexpected message type received: ${clientMessage::class.simpleName}")
                 }
             }
         } catch (e: Exception) {
