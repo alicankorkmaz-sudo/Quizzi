@@ -3,7 +3,7 @@ package util
 import org.slf4j.LoggerFactory
 
 object Logger {
-    private val logger = LoggerFactory.getLogger("FlagQuizServer")
+    private val logger = LoggerFactory.getLogger("Quizzi")
 
     fun d(message: String) {
         logger.debug("[DEBUG] $message")
