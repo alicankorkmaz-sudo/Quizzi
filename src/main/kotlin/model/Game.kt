@@ -8,11 +8,10 @@ import kotlinx.serialization.Serializable
 @Serializable
 abstract class Game (
     val id: String,
-    val players: MutableList<Player> = mutableListOf(),
     var currentQuestion: Question? = null
 ) {
     abstract fun nextQuestion() : Question
-    abstract fun processAnswer(answeredPlayerId: String?, answer: Int?)
+    abstract fun processAnswer(players: MutableList<Player>, answeredPlayerId: String?, answer: Int?): Boolean
 
     abstract fun getRoundTime() : Long
 

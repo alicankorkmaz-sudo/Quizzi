@@ -7,12 +7,11 @@ import data.QuestionDatabase
  */
 class ResistanceGame(
     id: String,
-    players: MutableList<Player> = mutableListOf(),
     currentQuestion: Question? = null,
     var cursorPosition: Float = 0.5f
-) : Game(id, players, currentQuestion) {
+) : Game(id, currentQuestion) {
 
-    private val ROUND_TIME_SECONDS = 10L
+    private val ROUND_TIME_SECONDS = 20L
 
     private val MAX_PLAYERS = 2
     override fun nextQuestion(): Question {
@@ -20,10 +19,10 @@ class ResistanceGame(
         return currentQuestion!!
     }
 
-    override fun processAnswer(answeredPlayerId: String?, answer: Int?) {
-        val correctAnswer = answer == currentQuestion?.answer
+    override fun processAnswer(players: MutableList<Player>, answeredPlayerId: String?, answer: Int?) : Boolean {
+        val isCorrect = answer == currentQuestion?.answer
 
-        if (correctAnswer) {
+        if (isCorrect) {
             val correctPlayer = players.find { p ->
                 p.id == answeredPlayerId
             }
@@ -39,6 +38,7 @@ class ResistanceGame(
                 }
             }
         }
+        return isCorrect
     }
 
     override fun getRoundTime(): Long {
