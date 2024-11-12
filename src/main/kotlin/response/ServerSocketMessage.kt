@@ -1,9 +1,9 @@
 package response
 
+import dto.QuestionDTO
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonClassDiscriminator
-import model.QuestionDTO
 import model.Player
 import model.RoomState
 
