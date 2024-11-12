@@ -2,9 +2,9 @@ package data
 
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
-import models.Flag
-import models.Option
-import models.Question
+import model.Flag
+import model.Option
+import model.Question
 
 object FlagDatabase {
     private val flags: List<Flag> = loadFlags()
