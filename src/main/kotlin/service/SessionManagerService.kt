@@ -25,7 +25,8 @@ class SessionManagerService private constructor() {
         playerSessions[playerId] = session
     }
 
-    fun removePlayerSession(playerId: String) {
+    suspend fun removePlayerSession(playerId: String) {
+        playerSessions[playerId]?.close(reason = CloseReason(1,"Room closed"))
         playerSessions.remove(playerId)
     }
 

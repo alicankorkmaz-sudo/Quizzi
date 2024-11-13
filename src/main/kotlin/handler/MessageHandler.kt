@@ -39,6 +39,19 @@ class MessageHandler private constructor() {
                     }
                 }
 
+                is ClientSocketMessage.RejoinRoom -> {
+                    val success = RoomManagerService.INSTANCE.rejoinRoom(playerId, clientMessage.roomId)
+                    val response = ServerSocketMessage.RejoinedRoom(
+                        clientMessage.roomId,
+                        playerId,
+                        success = success
+                    )
+                    SessionManagerService.INSTANCE.broadcastToPlayers(mutableListOf(playerId), response)
+                    if (success) {
+                        RoomManagerService.INSTANCE.continueGame(clientMessage.roomId)
+                    }
+                }
+
                 is ClientSocketMessage.PlayerReady -> {
 
                 }
@@ -46,10 +59,6 @@ class MessageHandler private constructor() {
                 is ClientSocketMessage.PlayerAnswer -> {
                     val roomId = RoomManagerService.INSTANCE.getRoomIdFromPlayerId(playerId)
                     RoomManagerService.INSTANCE.playerAnswered(roomId, playerId, clientMessage.answer)
-                }
-
-                else -> {
-                    println("Unexpected message type received: ${clientMessage::class.simpleName}")
                 }
             }
         } catch (e: Exception) {
@@ -59,7 +68,7 @@ class MessageHandler private constructor() {
     }
 
     suspend fun handleDisconnect(playerId: String) {
-        RoomManagerService.INSTANCE.playerDisconnected(playerId)
         SessionManagerService.INSTANCE.removePlayerSession(playerId)
+        RoomManagerService.INSTANCE.playerDisconnected(playerId)
     }
 }

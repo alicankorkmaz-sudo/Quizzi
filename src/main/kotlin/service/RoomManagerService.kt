@@ -56,6 +56,18 @@ class RoomManagerService private constructor() {
         return true
     }
 
+    suspend fun rejoinRoom(playerId: String, roomId: String): Boolean {
+        PlayerManagerService.INSTANCE.getPlayer(playerId) ?: return false
+        val room = rooms[roomId] ?: return false
+
+        disconnectedPlayers[playerId] ?: return false
+        room.roomState = RoomState.PLAYING
+        playerToRoom[playerId] = roomId
+        println("Player $playerId joined room $roomId")
+        broadcastRoomState(roomId)
+        return true
+    }
+
     private fun cleanupRoom(room: GameRoom) {
         // Oda verilerini temizle
         room.rounds.last().timer?.cancel()
@@ -67,6 +79,26 @@ class RoomManagerService private constructor() {
         //default resistanceGame start
         val game = ResistanceGame(roomId)
         room.game = game
+
+        println("Starting game for room $roomId with ${room.players.size} players")
+        if (room.players.size != room.game!!.maxPlayerCount()) return
+
+        gameScope.launch {
+            println("Starting countdown for room $roomId")
+            room.roomState = RoomState.COUNTDOWN
+            broadcastRoomState(roomId)
+
+            println("Waiting 3 seconds...")
+            delay(3000)
+
+            println("Starting actual game for room $roomId")
+            room.roomState = RoomState.PLAYING
+            nextQuestion(room)
+        }
+    }
+
+    suspend fun continueGame(roomId: String) {
+        val room = rooms[roomId] ?: return
 
         println("Starting game for room $roomId with ${room.players.size} players")
         if (room.players.size != room.game!!.maxPlayerCount()) return
@@ -210,63 +242,33 @@ class RoomManagerService private constructor() {
         }
     }
 
-    suspend fun handleReconnect(playerId: String, session: DefaultWebSocketSession): Boolean {
-        /*val disconnectedPlayer = disconnectedPlayers[playerId] ?: return false
-        val room = rooms[disconnectedPlayer.roomId] ?: return false
-
-        // Oyuncuyu yeniden bağla
-        SessionManagerService.INSTANCE.addPlayerToSession(playerId, session)
-        playerToRoom[playerId] = disconnectedPlayer.roomId
-        disconnectedPlayers.remove(playerId)
-        // Diğer oyuncuya bildir
-        val reconnectMessage = ServerMessage.ConnectionState(
-            type = GameMessage.ConnectionStateType.RECONNECT_SUCCESS,
-            playerId = playerId,
-            playerName = disconnectedPlayer.playerName
-        )
-        SessionManagerService.INSTANCE.broadcastToPlayers(room.players.filter { it.id != playerId }.map(Player::id).toMutableList(), reconnectMessage)
-        broadcastRoomState(room.id)
-
-        // Oyunu devam ettir
-        if (room.roomState == RoomState.PAUSED) {
-            room.roomState = RoomState.PLAYING
-            nextQuestion(room)
-        }*/
-
-        return true
-    }
-
     suspend fun playerDisconnected(playerId: String) {
-        val roomId = rooms.entries.find { entry ->
-            entry.value.players.any { it.id == playerId }
-        }?.key
+        val roomId = playerToRoom[playerId]
 
         if (roomId != null) {
             val room = rooms[roomId]
             if (room != null) {
-                val player = room.players.find { it.id == playerId }
+                val player = PlayerManagerService.INSTANCE.getPlayer(playerId)
                 if (player != null) {
-                    // Disconnected players listesine ekle
                     disconnectedPlayers[playerId] = DisconnectedPlayer(
                         playerId = playerId,
                         playerName = player.name,
                         roomId = roomId
                     )
+                    playerToRoom.remove(playerId)
 
-                    // Diğer oyuncuya bildir
                     val disconnectMessage = ServerSocketMessage.PlayerDisconnected(playerId = player.id, playerName = player.name)
-                    SessionManagerService.INSTANCE.broadcastToPlayers(
-                        room.players.filter { it.id != playerId }.map(Player::id).toMutableList(),
-                        disconnectMessage)
+                    SessionManagerService.INSTANCE.broadcastToPlayers(room.players.filter { it.id != playerId }.map(Player::id).toMutableList(), disconnectMessage)
 
-                    // Oyunu duraklatmak için GameState'i gncelle
                     room.roomState = RoomState.PAUSED
-                    room.rounds.last().timer?.cancel() // Timer'ı durdur
+                    room.rounds.last().timer?.cancel()
+                    room.rounds.removeAt(room.rounds.size - 1)
 
                     // 30 saniye bekle ve oyuncu geri bağlanmazsa odayı temizle
                     CoroutineScope(Dispatchers.Default).launch {
                         delay(30000)
-                        if (disconnectedPlayers.containsKey(playerId)) {
+                        if (room.roomState == RoomState.PAUSED) {
+                            disconnectedPlayers.remove(playerId)
                             println("Player $playerId did not reconnect within 30 seconds, cleaning up room $roomId")
                             // Odadaki oyunculara bildir
                             room.players.forEach { player ->
@@ -278,11 +280,8 @@ class RoomManagerService private constructor() {
                                 }
                                 // Oyuncu verilerini temizle
                                 SessionManagerService.INSTANCE.removePlayerSession(player.id)
-                                disconnectedPlayers.remove(player.id)
                             }
-                            // Oda verilerini temizle
-                            room.rounds.last().timer?.cancel()
-                            rooms.remove(room.id)
+                            cleanupRoom(room)
                         }
                     }
                 }

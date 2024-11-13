@@ -1,5 +1,7 @@
 package request
 
+import kotlinx.serialization.Serializable
+
 /**
  * @author guvencenanguvenal
  */

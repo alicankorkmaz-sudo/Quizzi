@@ -9,12 +9,9 @@ import io.ktor.server.routing.*
 import io.ktor.server.websocket.*
 import io.ktor.websocket.*
 import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.jsonObject
-import kotlinx.serialization.json.jsonPrimitive
 import router.playerRoutes
 import router.roomRoutes
 import service.PlayerManagerService
-import service.RoomManagerService
 import service.SessionManagerService
 import java.time.Duration
 
@@ -67,16 +64,7 @@ fun Application.module() {
                     when (frame) {
                         is Frame.Text -> {
                             val text = frame.readText()
-                            // Reconnect mesajını kontrol et
-                            val jsonElement = Json.parseToJsonElement(text)
-                            if (jsonElement.jsonObject["type"]?.jsonPrimitive?.content == "Reconnect") {
-                                val oldPlayerId = jsonElement.jsonObject["playerId"]?.jsonPrimitive?.content
-                                if (oldPlayerId != null) {
-                                    RoomManagerService.INSTANCE.handleReconnect(oldPlayerId, this)
-                                }
-                            } else {
-                                MessageHandler.INSTANCE.handleMessage(playerId, text)
-                            }
+                            MessageHandler.INSTANCE.handleMessage(playerId, text)
                         }
 
                         is Frame.Close -> {
