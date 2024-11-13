@@ -28,6 +28,14 @@ sealed class ServerSocketMessage() {
     ) : ServerSocketMessage()
 
     @Serializable
+    @SerialName("RejoinedRoom")
+    data class RejoinedRoom(
+        val roomId: String,
+        val playerId: String,
+        val success: Boolean
+    ) : ServerSocketMessage()
+
+    @Serializable
     @SerialName("RoomUpdate")
     data class RoomUpdate(
         val players: List<Player>,
@@ -75,12 +83,6 @@ sealed class ServerSocketMessage() {
     data class PlayerDisconnected(
         val playerId: String,
         val playerName: String
-    ) : ServerSocketMessage()
-
-    @Serializable
-    @SerialName("PlayerReconnected")
-    data class PlayerReconnected(
-        val playerId: String
     ) : ServerSocketMessage()
 
     @Serializable
