@@ -226,6 +226,12 @@ class RoomManagerService private constructor() {
     suspend fun playerAnswered(roomId: String, playerId: String, answer: Int) {
         val room = rooms[roomId] ?: return
         val question = room.game!!.currentQuestion ?: return
+
+        //hali hazirda dogru yanit varsa ikinci yaniti handle etme
+        if(question.answer == room.rounds.last().answer) {
+            return
+        }
+
         val player = room.players.find { it.id == playerId } ?: return
         room.rounds.last().answer = answer
         room.rounds.last().answeredPlayer = player
@@ -244,7 +250,6 @@ class RoomManagerService private constructor() {
 
     suspend fun playerDisconnected(playerId: String) {
         val roomId = playerToRoom[playerId]
-
         if (roomId != null) {
             val room = rooms[roomId]
             if (room != null) {
@@ -255,7 +260,13 @@ class RoomManagerService private constructor() {
                         playerName = player.name,
                         roomId = roomId
                     )
+                    room.players.remove(player)
                     playerToRoom.remove(playerId)
+
+                    if(room.players.size == 0) {
+                        cleanupRoom(room)
+                        return
+                    }
 
                     val disconnectMessage = ServerSocketMessage.PlayerDisconnected(playerId = player.id, playerName = player.name)
                     SessionManagerService.INSTANCE.broadcastToPlayers(room.players.filter { it.id != playerId }.map(Player::id).toMutableList(), disconnectMessage)
@@ -270,7 +281,6 @@ class RoomManagerService private constructor() {
                         if (room.roomState == RoomState.PAUSED) {
                             disconnectedPlayers.remove(playerId)
                             println("Player $playerId did not reconnect within 30 seconds, cleaning up room $roomId")
-                            // Odadaki oyunculara bildir
                             room.players.forEach { player ->
                                 SessionManagerService.INSTANCE.getPlayerSession(player.id)?.let { session ->
                                     CoroutineScope(Dispatchers.IO).launch {
@@ -278,7 +288,6 @@ class RoomManagerService private constructor() {
                                         session.send(Frame.Text(json.encodeToString(message)))
                                     }
                                 }
-                                // Oyuncu verilerini temizle
                                 SessionManagerService.INSTANCE.removePlayerSession(player.id)
                             }
                             cleanupRoom(room)
