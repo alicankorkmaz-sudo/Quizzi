@@ -68,7 +68,8 @@ class RoomManagerService private constructor() {
         return true
     }
 
-    private fun cleanupRoom(room: GameRoom) {
+    private suspend fun cleanupRoom(room: GameRoom) {
+        room.players.forEach { player -> SessionManagerService.INSTANCE.removePlayerSession(player.id) }
         // Oda verilerini temizle
         if (room.rounds.size > 0) {
             room.rounds.last().timer?.cancel()
@@ -226,13 +227,25 @@ class RoomManagerService private constructor() {
     suspend fun playerAnswered(roomId: String, playerId: String, answer: Int) {
         val room = rooms[roomId] ?: return
         val question = room.game!!.currentQuestion ?: return
+        val player = room.players.find { it.id == playerId } ?: return
 
-        //hali hazirda dogru yanit varsa ikinci yaniti handle etme
-        if(question.answer == room.rounds.last().answer) {
+        //iki kullanici da bilemedi
+        if ((room.rounds.last().answer != null) && (answer != question.answer)) {
+            val answerResult = ServerSocketMessage.AnswerResult(
+                playerId = player.id,
+                answer = answer,
+                correct = false
+            )
+            broadcastToRoom(roomId, answerResult)
+            endRound(roomId)
             return
         }
 
-        val player = room.players.find { it.id == playerId } ?: return
+        //hali hazirda dogru yanit varsa ikinci yaniti handle etme
+        if (question.answer == room.rounds.last().answer) {
+            return
+        }
+
         room.rounds.last().answer = answer
         room.rounds.last().answeredPlayer = player
 
