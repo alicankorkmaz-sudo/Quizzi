@@ -70,7 +70,9 @@ class RoomManagerService private constructor() {
 
     private fun cleanupRoom(room: GameRoom) {
         // Oda verilerini temizle
-        room.rounds.last().timer?.cancel()
+        if (room.rounds.size > 0) {
+            room.rounds.last().timer?.cancel()
+        }
         rooms.remove(room.id)
     }
 
