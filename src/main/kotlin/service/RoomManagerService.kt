@@ -34,9 +34,9 @@ class RoomManagerService private constructor() {
         return playerToRoom[playerId]!!
     }
 
-    fun createRoom(playerId: String): String {
+    fun createRoom(playerId: String, gameType: String): String {
         val roomId = UUID.randomUUID().toString()
-        val room = GameRoom(roomId)
+        val room = GameRoom(roomId, GameFactory.INSTANCE.createGame(roomId, FLAG_CATEGORY, gameType))
         val player = PlayerManagerService.INSTANCE.getPlayer(playerId) ?: return roomId //TODO: error message atilmali
         room.players.add(player)
         rooms[roomId] = room
@@ -82,11 +82,8 @@ class RoomManagerService private constructor() {
     suspend fun startGame(roomId: String) {
         val room = rooms[roomId] ?: return
         //default resistanceGame start
-        val game = ResistanceGame(roomId, FLAG_CATEGORY)
-        room.game = game
-
         println("Starting game for room $roomId with ${room.players.size} players")
-        if (room.players.size != room.game!!.maxPlayerCount()) return
+        if (room.players.size != room.game.maxPlayerCount()) return
 
         gameScope.launch {
             println("Starting countdown for room $roomId")
@@ -106,7 +103,7 @@ class RoomManagerService private constructor() {
         val room = rooms[roomId] ?: return
 
         println("Starting game for room $roomId with ${room.players.size} players")
-        if (room.players.size != room.game!!.maxPlayerCount()) return
+        if (room.players.size != room.game.maxPlayerCount()) return
 
         gameScope.launch {
             println("Starting countdown for room $roomId")
@@ -131,13 +128,13 @@ class RoomManagerService private constructor() {
             players = room.players,
             state = room.roomState,
             cursorPosition = resistanceGame?.cursorPosition ?: 0.5f,
-            currentQuestion = room.game?.currentQuestion?.toDTO()
+            currentQuestion = room.game.currentQuestion?.toDTO()
         )
         broadcastToRoom(roomId, gameUpdate)
     }
 
     private suspend fun nextQuestion(room: GameRoom) {
-        val question = room.game!!.nextQuestion()
+        val question = room.game.nextQuestion()
         //TODO: gameleri yoneten bir yapi kurulmali
         val resistanceGame = room.game as ResistanceGame?
 
@@ -145,7 +142,7 @@ class RoomManagerService private constructor() {
             players = room.players,
             state = RoomState.PLAYING,
             cursorPosition = resistanceGame?.cursorPosition ?: 0.5f,
-            timeRemaining = room.game!!.getRoundTime(),
+            timeRemaining = room.game.getRoundTime(),
             currentQuestion = question.toDTO()
         )
 
@@ -159,7 +156,7 @@ class RoomManagerService private constructor() {
         room.rounds.add(Round(roundNumber))
         room.rounds.last().timer = CoroutineScope(Dispatchers.Default).launch {
             try {
-                for (timeLeft in room.game!!.getRoundTime() - 1 downTo 1) {
+                for (timeLeft in room.game.getRoundTime() - 1 downTo 1) {
                     delay(1000)
                     val timeUpdate = ServerSocketMessage.TimeUpdate(remaining = timeLeft)
                     broadcastToRoom(roomId, timeUpdate)
@@ -169,7 +166,7 @@ class RoomManagerService private constructor() {
                 room.rounds.last().answer = null
 
                 // Süre doldu mesajı
-                val timeUpMessage = ServerSocketMessage.TimeUp(correctAnswer = room.game?.currentQuestion?.answer!!)
+                val timeUpMessage = ServerSocketMessage.TimeUp(correctAnswer = room.game.currentQuestion?.answer!!)
                 broadcastToRoom(roomId, timeUpMessage)
 
                 endRound(roomId)
@@ -184,11 +181,11 @@ class RoomManagerService private constructor() {
         val answer = room.rounds.last().answer
         val answeredPlayerId = room.rounds.last().answeredPlayer?.id
         //TODO: gameleri yoneten bir yapi kurulmali
-        val resistanceGame = room.game!! as ResistanceGame
+        val resistanceGame = room.game as ResistanceGame
 
         room.rounds.last().timer?.cancel()
 
-        val isCorrect = room.game!!.processAnswer(room.players, answeredPlayerId, answer)
+        val isCorrect = room.game.processAnswer(room.players, answeredPlayerId, answer)
 
         if (resistanceGame.cursorPosition <= 0f || resistanceGame.cursorPosition >= 1f) {
             room.roomState = RoomState.FINISHED
@@ -228,7 +225,7 @@ class RoomManagerService private constructor() {
 
     suspend fun playerAnswered(roomId: String, playerId: String, answer: Int) {
         val room = rooms[roomId] ?: return
-        val question = room.game!!.currentQuestion ?: return
+        val question = room.game.currentQuestion ?: return
         val player = room.players.find { it.id == playerId } ?: return
 
         //iki kullanici da bilemedi
