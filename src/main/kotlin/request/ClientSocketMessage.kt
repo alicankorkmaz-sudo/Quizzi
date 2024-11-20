@@ -13,9 +13,7 @@ sealed class ClientSocketMessage {
 
     @Serializable
     @SerialName("CreateRoom")
-    data class CreateRoom(
-        val gameType: String
-    ) : ClientSocketMessage()
+    data object CreateRoom : ClientSocketMessage()
 
     @Serializable
     @SerialName("JoinRoom")

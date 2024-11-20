@@ -34,7 +34,7 @@ class RoomManagerService private constructor() {
 
     fun createRoom(playerId: String, gameType: String): String {
         val roomId = UUID.randomUUID().toString()
-        val room = GameRoom(roomId, GameFactory.INSTANCE.createGame(roomId, GameFactory.GameType.FLAGS, gameType))
+        val room = GameRoom(roomId, GameFactory.INSTANCE.createGame(roomId, GameFactory.CategoryType.FLAGS, gameType))
         val player = PlayerManagerService.INSTANCE.getPlayer(playerId) ?: return roomId //TODO: error message atilmali
         room.players.add(player)
         rooms[roomId] = room

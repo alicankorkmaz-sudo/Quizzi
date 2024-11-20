@@ -20,6 +20,12 @@ class GameFactory private constructor() {
 
     class GameType {
         companion object {
+            const val RESISTANCE_GAME = "ResistanceGame"
+        }
+    }
+
+    class CategoryType {
+        companion object {
             const val FLAGS = 1
         }
     }
