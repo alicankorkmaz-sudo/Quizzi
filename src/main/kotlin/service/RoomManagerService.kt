@@ -18,8 +18,6 @@ class RoomManagerService private constructor() {
         val INSTANCE: RoomManagerService by lazy(LazyThreadSafetyMode.SYNCHRONIZED) { RoomManagerService() }
     }
 
-    private val FLAG_CATEGORY = 1
-
     private val json = Json { ignoreUnknownKeys = true }
 
     private val gameScope = CoroutineScope(Dispatchers.Default + Job())
@@ -36,7 +34,7 @@ class RoomManagerService private constructor() {
 
     fun createRoom(playerId: String, gameType: String): String {
         val roomId = UUID.randomUUID().toString()
-        val room = GameRoom(roomId, GameFactory.INSTANCE.createGame(roomId, FLAG_CATEGORY, gameType))
+        val room = GameRoom(roomId, GameFactory.INSTANCE.createGame(roomId, GameFactory.GameType.FLAGS, gameType))
         val player = PlayerManagerService.INSTANCE.getPlayer(playerId) ?: return roomId //TODO: error message atilmali
         room.players.add(player)
         rooms[roomId] = room

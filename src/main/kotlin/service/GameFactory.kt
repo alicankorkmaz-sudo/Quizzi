@@ -17,4 +17,10 @@ class GameFactory private constructor() {
             else -> ResistanceGame(id, categoryId)
         }
     }
+
+    class GameType {
+        companion object {
+            const val FLAGS = 1
+        }
+    }
 }
