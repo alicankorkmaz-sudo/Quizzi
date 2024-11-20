@@ -6,6 +6,7 @@ import kotlinx.serialization.Serializable
 @Serializable
 data class Question(
     val id: Int,
+    val categoryId: Int,
     val imageUrl: String?,
     val content: String,
     val options: List<Option>,

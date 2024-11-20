@@ -7,15 +7,17 @@ import data.QuestionDatabase
  */
 class ResistanceGame(
     id: String,
+    categoryId: Int,
     currentQuestion: Question? = null,
     var cursorPosition: Float = 0.5f
-) : Game(id, currentQuestion) {
+) : Game(id, categoryId, currentQuestion) {
 
     private val ROUND_TIME_SECONDS = 20L
 
     private val MAX_PLAYERS = 2
+
     override fun nextQuestion(): Question {
-        currentQuestion = QuestionDatabase.getRandomQuestion()
+        currentQuestion = QuestionDatabase.getRandomQuestion(categoryId)
         return currentQuestion!!
     }
 
