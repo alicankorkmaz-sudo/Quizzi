@@ -8,6 +8,7 @@ import kotlinx.serialization.Serializable
 @Serializable
 abstract class Game (
     val id: String,
+    val categoryId: Int,
     var currentQuestion: Question? = null
 ) {
     abstract fun nextQuestion() : Question

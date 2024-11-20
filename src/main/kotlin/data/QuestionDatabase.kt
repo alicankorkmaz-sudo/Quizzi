@@ -18,11 +18,12 @@ object QuestionDatabase {
         return questions.shuffled().take(count)
     }
 
-    fun getRandomQuestion(): Question {
-        val question = questions.shuffled().first()
+    fun getRandomQuestion(categoryId: Int): Question {
+        val question = questions.filter { q -> q.categoryId == categoryId }.shuffled().first()
 
         return Question(
             id = question.id,
+            categoryId = question.categoryId,
             imageUrl = question.imageUrl,
             content = question.content,
             options = question.options.shuffled(),

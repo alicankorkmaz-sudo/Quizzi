@@ -18,6 +18,8 @@ class RoomManagerService private constructor() {
         val INSTANCE: RoomManagerService by lazy(LazyThreadSafetyMode.SYNCHRONIZED) { RoomManagerService() }
     }
 
+    private val FLAG_CATEGORY = 1
+
     private val json = Json { ignoreUnknownKeys = true }
 
     private val gameScope = CoroutineScope(Dispatchers.Default + Job())
@@ -80,7 +82,7 @@ class RoomManagerService private constructor() {
     suspend fun startGame(roomId: String) {
         val room = rooms[roomId] ?: return
         //default resistanceGame start
-        val game = ResistanceGame(roomId)
+        val game = ResistanceGame(roomId, FLAG_CATEGORY)
         room.game = game
 
         println("Starting game for room $roomId with ${room.players.size} players")
