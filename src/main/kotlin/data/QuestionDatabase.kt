@@ -14,10 +14,6 @@ object QuestionDatabase {
         } ?: emptyList()
     }
 
-    fun getRandomFlags(count: Int): List<Question> {
-        return questions.shuffled().take(count)
-    }
-
     fun getRandomQuestion(categoryId: Int): Question {
         val question = questions.filter { q -> q.categoryId == categoryId }.shuffled().first()
 
