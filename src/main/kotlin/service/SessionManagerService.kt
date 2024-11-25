@@ -1,6 +1,7 @@
 package service
 
 import io.ktor.websocket.*
+import kotlinx.coroutines.coroutineScope
 import kotlinx.serialization.json.Json
 import response.ServerSocketMessage
 import java.util.*
@@ -31,18 +32,17 @@ class SessionManagerService private constructor() {
     }
 
     suspend fun broadcastToPlayers(playerIds: MutableList<String>, message: ServerSocketMessage) {
+        val sessions = Collections.synchronizedList(mutableListOf<DefaultWebSocketSession>())
         playerIds.forEach { playerId ->
             val session = playerSessions[playerId]
             if (session != null) {
-                try {
-                    session.send(Frame.Text(json.encodeToString(ServerSocketMessage.serializer(), message)))
-                    println("Message sent to player $playerId")
-                } catch (e: Exception) {
-                    println("Error sending message to player $playerId: ${e.message}")
-                }
+                sessions.add(session)
             } else {
                 println("No session found for player $playerId")
             }
+        }
+        sessions.forEach {
+            session ->  session.send(Frame.Text(json.encodeToString(ServerSocketMessage.serializer(), message)))
         }
     }
 }
