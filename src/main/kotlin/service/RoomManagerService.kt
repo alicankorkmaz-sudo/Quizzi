@@ -18,6 +18,8 @@ class RoomManagerService private constructor() {
         val INSTANCE: RoomManagerService by lazy(LazyThreadSafetyMode.SYNCHRONIZED) { RoomManagerService() }
     }
 
+    private val roomService: RoomService = RoomService()
+
     private val COUNTDOWN_TIME = 3L
 
     private val json = Json { ignoreUnknownKeys = true }
@@ -34,40 +36,33 @@ class RoomManagerService private constructor() {
         return playerToRoom[playerId]!!
     }
 
-    fun createRoom(playerId: String, gameType: String): String {
-        val roomId = UUID.randomUUID().toString()
-        val room = GameRoom(roomId, GameFactory.INSTANCE.createGame(roomId, GameFactory.CategoryType.FLAGS, gameType))
-        val player = PlayerManagerService.INSTANCE.getPlayer(playerId) ?: return roomId //TODO: error message atilmali
-        room.players.add(player)
-        rooms[roomId] = room
-        playerToRoom[playerId] = roomId
-        println("Room $roomId created by player $playerId")
-        return roomId
+    fun createRoom(playerId: String, gameType: String): String? {
+        val gameId = UUID.randomUUID().toString()
+        val game = GameFactory.INSTANCE.createGame(gameId, GameFactory.CategoryType.FLAGS, gameType)
+        val creatorPlayer = PlayerManagerService.INSTANCE.getPlayer(playerId) ?: return null //TODO error would throw
+        return roomService.createRoom(creatorPlayer, game)
     }
 
     suspend fun joinRoom(playerId: String, roomId: String): Boolean {
         val player = PlayerManagerService.INSTANCE.getPlayer(playerId) ?: return false
-        val room = rooms[roomId] ?: return false
-        //TODO odaya istedigi kadar kisi katilabilecek
-        if (room.players.size >= 2) return false
-
-        room.players.add(player)
-        playerToRoom[playerId] = roomId
-        println("Player $playerId joined room $roomId")
-        broadcastRoomState(roomId)
-        return true
+        val isJoined = roomService.joinRoom(player, roomId)
+        if (isJoined) {
+            println("Player $playerId joined room $roomId")
+            broadcastRoomState(roomId)
+            return true
+        }
+        return false
     }
 
     suspend fun rejoinRoom(playerId: String, roomId: String): Boolean {
-        PlayerManagerService.INSTANCE.getPlayer(playerId) ?: return false
-        val room = rooms[roomId] ?: return false
-
-        disconnectedPlayers[playerId] ?: return false
-        room.roomState = RoomState.PLAYING
-        playerToRoom[playerId] = roomId
-        println("Player $playerId joined room $roomId")
-        broadcastRoomState(roomId)
-        return true
+        val player = PlayerManagerService.INSTANCE.getPlayer(playerId) ?: return false
+        val isRejoined = roomService.rejoinRoom(player, roomId)
+        if (isRejoined) {
+            println("Player $playerId joined room $roomId")
+            broadcastRoomState(roomId)
+            return true
+        }
+        return false
     }
 
     private suspend fun cleanupRoom(room: GameRoom) {
