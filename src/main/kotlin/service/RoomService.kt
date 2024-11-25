@@ -1,10 +1,16 @@
 package service
 
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import kotlinx.serialization.json.Json
 import model.Game
 import model.GameRoom
 import model.Player
 import model.RoomState
 import response.DisconnectedPlayer
+import response.ServerSocketMessage
 import java.util.*
 
 /**
@@ -18,6 +24,12 @@ class RoomService {
 
     private val disconnectedPlayers = Collections.synchronizedMap(mutableMapOf<String, DisconnectedPlayer>())
 
+    fun getAllRooms() = rooms
+
+    fun getRoomById(id: String) = rooms[id]
+
+    fun getRoomIdFromPlayerId(playerId: String) = playerToRoom[playerId]
+
     fun createRoom(creator: Player, game: Game): String {
         val roomId = UUID.randomUUID().toString()
         val room = GameRoom(roomId, game)
@@ -30,8 +42,7 @@ class RoomService {
 
     fun joinRoom(player: Player, roomId: String): Boolean {
         val room = rooms[roomId] ?: return false
-        //TODO odaya istedigi kadar kisi katilabilecek
-        if (room.players.size >= 2) return false
+        if (room.players.size >= room.game.maxPlayerCount()) return false
         room.players.add(player)
         playerToRoom[player.id] = roomId
         return true
@@ -45,13 +56,56 @@ class RoomService {
         return true
     }
 
-    private suspend fun cleanupRoom(room: GameRoom) {
+    suspend fun cleanupRoom(room: GameRoom) {
         room.players.forEach { player -> SessionManagerService.INSTANCE.removePlayerSession(player.id) }
         // Oda verilerini temizle
         if (room.rounds.size > 0) {
             room.rounds.last().timer?.cancel()
         }
         rooms.remove(room.id)
+    }
+
+    suspend fun playerDisconnected(playerId: String) {
+        val roomId = getRoomIdFromPlayerId(playerId)
+        if (roomId != null) {
+            val room = getRoomById(roomId)
+            if (room != null) {
+                val player = PlayerManagerService.INSTANCE.getPlayer(playerId)
+                if (player != null) {
+                    disconnectedPlayers[playerId] = DisconnectedPlayer(
+                        playerId = playerId,
+                        playerName = player.name,
+                        roomId = roomId
+                    )
+                    room.players.remove(player)
+                    playerToRoom.remove(playerId)
+
+                    if(room.players.size == 0) {
+                        cleanupRoom(room)
+                        return
+                    }
+
+                    val disconnectMessage = ServerSocketMessage.PlayerDisconnected(playerId = player.id, playerName = player.name)
+                    SessionManagerService.INSTANCE.broadcastToPlayers(room.players.filter { it.id != playerId }.map(Player::id).toMutableList(), disconnectMessage)
+
+                    room.roomState = RoomState.PAUSED
+                    room.rounds.last().timer?.cancel()
+                    room.rounds.removeAt(room.rounds.size - 1)
+
+                    CoroutineScope(Dispatchers.Default).launch {
+                        delay(30000)
+                        if (room.roomState == RoomState.PAUSED) {
+                            disconnectedPlayers.remove(playerId)
+                            println("Player $playerId did not reconnect within 30 seconds, cleaning up room $roomId")
+                            val message = ServerSocketMessage.RoomClosed(reason = "Player disconnected for too long")
+                            SessionManagerService.INSTANCE.broadcastToPlayers(room.players.map { playerId }.toMutableList(), message)
+                            SessionManagerService.INSTANCE.removePlayerSession(player.id)
+                            cleanupRoom(room)
+                        }
+                    }
+                }
+            }
+        }
     }
 
 }
