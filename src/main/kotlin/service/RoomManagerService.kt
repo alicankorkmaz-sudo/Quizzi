@@ -18,6 +18,8 @@ class RoomManagerService private constructor() {
         val INSTANCE: RoomManagerService by lazy(LazyThreadSafetyMode.SYNCHRONIZED) { RoomManagerService() }
     }
 
+    private val COUNTDOWN_TIME = 3L
+
     private val json = Json { ignoreUnknownKeys = true }
 
     private val gameScope = CoroutineScope(Dispatchers.Default + Job())
@@ -88,8 +90,12 @@ class RoomManagerService private constructor() {
             room.roomState = RoomState.COUNTDOWN
             broadcastRoomState(roomId)
 
-            println("Waiting 3 seconds...")
-            delay(3000)
+            for (timeLeft in COUNTDOWN_TIME downTo 1) {
+                delay(1000)
+                val countdownTimeUpdate = ServerSocketMessage.CountdownTimeUpdate(remaining = timeLeft)
+                broadcastToRoom(roomId, countdownTimeUpdate)
+            }
+            delay(1000)
 
             println("Starting actual game for room $roomId")
             room.roomState = RoomState.PLAYING
@@ -108,8 +114,12 @@ class RoomManagerService private constructor() {
             room.roomState = RoomState.COUNTDOWN
             broadcastRoomState(roomId)
 
-            println("Waiting 3 seconds...")
-            delay(3000)
+            for (timeLeft in COUNTDOWN_TIME downTo 1) {
+                delay(1000)
+                val countdownTimeUpdate = ServerSocketMessage.CountdownTimeUpdate(remaining = timeLeft)
+                broadcastToRoom(roomId, countdownTimeUpdate)
+            }
+            delay(1000)
 
             println("Starting actual game for room $roomId")
             room.roomState = RoomState.PLAYING
