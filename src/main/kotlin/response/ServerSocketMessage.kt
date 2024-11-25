@@ -36,6 +36,12 @@ sealed class ServerSocketMessage() {
     ) : ServerSocketMessage()
 
     @Serializable
+    @SerialName("CountdownUpdate")
+    data class CountdownUpdate(
+        val remaining: Long
+    ) : ServerSocketMessage()
+
+    @Serializable
     @SerialName("RoomUpdate")
     data class RoomUpdate(
         val players: List<Player>,
