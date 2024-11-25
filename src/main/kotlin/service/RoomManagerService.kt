@@ -158,10 +158,15 @@ class RoomManagerService private constructor() {
         startRound(room.id)
     }
 
-    private fun startRound(roomId: String) {
+    private suspend fun startRound(roomId: String) {
         val room = rooms[roomId]!!
         val roundNumber = room.rounds.size + 1
         room.rounds.add(Round(roundNumber))
+        val roundEnded = ServerSocketMessage.RoundStarted(
+            roundNumber = roundNumber,
+            currentQuestion = room.game.currentQuestion?.toDTO()
+        )
+        broadcastToRoom(roomId, roundEnded)
         room.rounds.last().timer = CoroutineScope(Dispatchers.Default).launch {
             try {
                 for (timeLeft in room.game.getRoundTime() - 1 downTo 1) {
@@ -204,11 +209,12 @@ class RoomManagerService private constructor() {
             delay(5000)
             cleanupRoom(room)
         } else {
-            val roundResult = ServerSocketMessage.RoundResult(
+            val roundEnded = ServerSocketMessage.RoundEnded(
+                cursorPosition = resistanceGame.cursorPosition,
                 correctAnswer = resistanceGame.currentQuestion!!.answer,
                 winnerPlayerId = if (isCorrect) room.rounds.last().answeredPlayer?.id!! else null
             )
-            broadcastToRoom(roomId, roundResult)
+            broadcastToRoom(roomId, roundEnded)
             nextQuestion(room)
         }
     }
