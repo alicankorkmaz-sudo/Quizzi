@@ -92,8 +92,8 @@ class RoomManagerService private constructor() {
 
             for (timeLeft in COUNTDOWN_TIME downTo 1) {
                 delay(1000)
-                val countdownUpdate = ServerSocketMessage.CountdownUpdate(remaining = timeLeft)
-                broadcastToRoom(roomId, countdownUpdate)
+                val countdownTimeUpdate = ServerSocketMessage.CountdownTimeUpdate(remaining = timeLeft)
+                broadcastToRoom(roomId, countdownTimeUpdate)
             }
             delay(1000)
 
@@ -116,8 +116,8 @@ class RoomManagerService private constructor() {
 
             for (timeLeft in COUNTDOWN_TIME downTo 1) {
                 delay(1000)
-                val countdownUpdate = ServerSocketMessage.CountdownUpdate(remaining = timeLeft)
-                broadcastToRoom(roomId, countdownUpdate)
+                val countdownTimeUpdate = ServerSocketMessage.CountdownTimeUpdate(remaining = timeLeft)
+                broadcastToRoom(roomId, countdownTimeUpdate)
             }
             delay(1000)
 
