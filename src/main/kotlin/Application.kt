@@ -54,10 +54,8 @@ fun Application.module() {
                 return@webSocket
             }
             println("New WebSocket connection: $playerId")
-
-            PlayerManagerService.INSTANCE.getPlayer(playerId) ?: close(CloseReason(CloseReason.Codes.VIOLATED_POLICY, "Missing playerId"))
-
             try {
+                PlayerManagerService.INSTANCE.getPlayer(playerId)
                 SessionManagerService.INSTANCE.addPlayerToSession(playerId, this)
 
                 for (frame in incoming) {
@@ -77,7 +75,7 @@ fun Application.module() {
                 }
             } catch (e: Exception) {
                 println("Error in WebSocket connection: ${e.message}")
-                e.printStackTrace()
+                close(CloseReason(CloseReason.Codes.VIOLATED_POLICY, e.message ?: "Unexpected Error!"))
             } finally {
                 println("WebSocket connection terminated for player $playerId")
                 MessageHandler.INSTANCE.handleDisconnect(playerId)
