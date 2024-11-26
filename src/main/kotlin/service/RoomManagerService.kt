@@ -16,71 +16,52 @@ import java.util.*
 class RoomManagerService private constructor() {
     companion object {
         val INSTANCE: RoomManagerService by lazy(LazyThreadSafetyMode.SYNCHRONIZED) { RoomManagerService() }
+        val COUNTDOWN_TIME = 3L
     }
 
-    private val COUNTDOWN_TIME = 3L
-
-    private val json = Json { ignoreUnknownKeys = true }
+    private val roomService: RoomService = RoomService()
 
     private val gameScope = CoroutineScope(Dispatchers.Default + Job())
 
-    private val rooms = Collections.synchronizedMap(mutableMapOf<String, GameRoom>())
-
-    private val playerToRoom = Collections.synchronizedMap(mutableMapOf<String, String>())
-
-    private val disconnectedPlayers = Collections.synchronizedMap(mutableMapOf<String, DisconnectedPlayer>())
-
     fun getRoomIdFromPlayerId(playerId: String): String {
-        return playerToRoom[playerId]!!
+        return roomService.getRoomIdFromPlayerId(playerId)!!
     }
 
-    fun createRoom(playerId: String, gameType: String): String {
-        val roomId = UUID.randomUUID().toString()
-        val room = GameRoom(roomId, GameFactory.INSTANCE.createGame(roomId, GameFactory.CategoryType.FLAGS, gameType))
-        val player = PlayerManagerService.INSTANCE.getPlayer(playerId) ?: return roomId //TODO: error message atilmali
-        room.players.add(player)
-        rooms[roomId] = room
-        playerToRoom[playerId] = roomId
-        println("Room $roomId created by player $playerId")
-        return roomId
+    fun createRoom(playerId: String, gameType: String): String? {
+        val gameId = UUID.randomUUID().toString()
+        val game = GameFactory.INSTANCE.createGame(gameId, GameFactory.CategoryType.FLAGS, gameType)
+        val creatorPlayer = PlayerManagerService.INSTANCE.getPlayer(playerId) ?: return null //TODO error would throw
+        return roomService.createRoom(creatorPlayer, game)
     }
 
     suspend fun joinRoom(playerId: String, roomId: String): Boolean {
         val player = PlayerManagerService.INSTANCE.getPlayer(playerId) ?: return false
-        val room = rooms[roomId] ?: return false
-        //TODO odaya istedigi kadar kisi katilabilecek
-        if (room.players.size >= 2) return false
-
-        room.players.add(player)
-        playerToRoom[playerId] = roomId
-        println("Player $playerId joined room $roomId")
-        broadcastRoomState(roomId)
-        return true
+        val isJoined = roomService.joinRoom(player, roomId)
+        if (isJoined) {
+            println("Player $playerId joined room $roomId")
+            broadcastRoomState(roomId)
+            return true
+        }
+        return false
     }
 
     suspend fun rejoinRoom(playerId: String, roomId: String): Boolean {
-        PlayerManagerService.INSTANCE.getPlayer(playerId) ?: return false
-        val room = rooms[roomId] ?: return false
-
-        disconnectedPlayers[playerId] ?: return false
-        room.roomState = RoomState.PLAYING
-        playerToRoom[playerId] = roomId
-        println("Player $playerId joined room $roomId")
-        broadcastRoomState(roomId)
-        return true
+        val player = PlayerManagerService.INSTANCE.getPlayer(playerId) ?: return false
+        val isRejoined = roomService.rejoinRoom(player, roomId)
+        if (isRejoined) {
+            println("Player $playerId joined room $roomId")
+            broadcastRoomState(roomId)
+            return true
+        }
+        return false
     }
 
     private suspend fun cleanupRoom(room: GameRoom) {
-        room.players.forEach { player -> SessionManagerService.INSTANCE.removePlayerSession(player.id) }
-        // Oda verilerini temizle
-        if (room.rounds.size > 0) {
-            room.rounds.last().timer?.cancel()
-        }
-        rooms.remove(room.id)
+        roomService.cleanupRoom(room)
     }
 
     suspend fun startGame(roomId: String) {
-        val room = rooms[roomId] ?: return
+        val room = roomService.getRoomById(roomId) ?: return
         //default resistanceGame start
         println("Starting game for room $roomId with ${room.players.size} players")
         if (room.players.size != room.game.maxPlayerCount()) return
@@ -104,7 +85,7 @@ class RoomManagerService private constructor() {
     }
 
     suspend fun continueGame(roomId: String) {
-        val room = rooms[roomId] ?: return
+        val room = roomService.getRoomById(roomId) ?: return
 
         println("Starting game for room $roomId with ${room.players.size} players")
         if (room.players.size != room.game.maxPlayerCount()) return
@@ -129,7 +110,7 @@ class RoomManagerService private constructor() {
 
     private suspend fun broadcastRoomState(roomId: String) {
         println("Broadcasting game state for room $roomId")
-        val room = rooms[roomId] ?: return
+        val room = roomService.getRoomById(roomId) ?: return
         val resistanceGame = room.game as ResistanceGame?
 
         val gameUpdate = ServerSocketMessage.RoomUpdate(
@@ -159,7 +140,7 @@ class RoomManagerService private constructor() {
     }
 
     private suspend fun startRound(roomId: String) {
-        val room = rooms[roomId]!!
+        val room = roomService.getRoomById(roomId) ?: return
         val roundNumber = room.rounds.size + 1
         room.rounds.add(Round(roundNumber))
         val roundEnded = ServerSocketMessage.RoundStarted(
@@ -190,7 +171,7 @@ class RoomManagerService private constructor() {
     }
 
     private suspend fun endRound(roomId: String) {
-        val room = rooms[roomId] ?: return
+        val room = roomService.getRoomById(roomId) ?: return
         val answer = room.rounds.last().answer
         val answeredPlayerId = room.rounds.last().answeredPlayer?.id
         //TODO: gameleri yoneten bir yapi kurulmali
@@ -221,13 +202,13 @@ class RoomManagerService private constructor() {
 
     private suspend fun broadcastToRoom(roomId: String, message: ServerSocketMessage) {
         println("Broadcasting message to room $roomId: $message")
-        val room = rooms[roomId] ?: return
+        val room = roomService.getRoomById(roomId) ?: return
         val playerIds = room.players.map(Player::id).toMutableList()
         SessionManagerService.INSTANCE.broadcastToPlayers(playerIds, message)
     }
 
     fun getActiveRooms(): List<GameRoomDTO> {
-        return rooms.map { (id, room) ->
+        return roomService.getAllRooms().map { (id, room) ->
             GameRoomDTO(
                 id = id,
                 playerCount = room.players.size,
@@ -238,7 +219,7 @@ class RoomManagerService private constructor() {
     }
 
     suspend fun playerAnswered(roomId: String, playerId: String, answer: Int) {
-        val room = rooms[roomId] ?: return
+        val room = roomService.getRoomById(roomId) ?: return
         val question = room.game.currentQuestion ?: return
         val player = room.players.find { it.id == playerId } ?: return
 
@@ -275,52 +256,6 @@ class RoomManagerService private constructor() {
     }
 
     suspend fun playerDisconnected(playerId: String) {
-        val roomId = playerToRoom[playerId]
-        if (roomId != null) {
-            val room = rooms[roomId]
-            if (room != null) {
-                val player = PlayerManagerService.INSTANCE.getPlayer(playerId)
-                if (player != null) {
-                    disconnectedPlayers[playerId] = DisconnectedPlayer(
-                        playerId = playerId,
-                        playerName = player.name,
-                        roomId = roomId
-                    )
-                    room.players.remove(player)
-                    playerToRoom.remove(playerId)
-
-                    if(room.players.size == 0) {
-                        cleanupRoom(room)
-                        return
-                    }
-
-                    val disconnectMessage = ServerSocketMessage.PlayerDisconnected(playerId = player.id, playerName = player.name)
-                    SessionManagerService.INSTANCE.broadcastToPlayers(room.players.filter { it.id != playerId }.map(Player::id).toMutableList(), disconnectMessage)
-
-                    room.roomState = RoomState.PAUSED
-                    room.rounds.last().timer?.cancel()
-                    room.rounds.removeAt(room.rounds.size - 1)
-
-                    // 30 saniye bekle ve oyuncu geri bağlanmazsa odayı temizle
-                    CoroutineScope(Dispatchers.Default).launch {
-                        delay(30000)
-                        if (room.roomState == RoomState.PAUSED) {
-                            disconnectedPlayers.remove(playerId)
-                            println("Player $playerId did not reconnect within 30 seconds, cleaning up room $roomId")
-                            room.players.forEach { player ->
-                                SessionManagerService.INSTANCE.getPlayerSession(player.id)?.let { session ->
-                                    CoroutineScope(Dispatchers.IO).launch {
-                                        val message = ServerSocketMessage.RoomClosed(reason = "Player disconnected for too long")
-                                        session.send(Frame.Text(json.encodeToString(message)))
-                                    }
-                                }
-                                SessionManagerService.INSTANCE.removePlayerSession(player.id)
-                            }
-                            cleanupRoom(room)
-                        }
-                    }
-                }
-            }
-        }
+        roomService.playerDisconnected(playerId)
     }
 }

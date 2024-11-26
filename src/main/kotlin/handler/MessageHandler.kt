@@ -21,7 +21,7 @@ class MessageHandler private constructor() {
         try {
             when (val clientMessage = json.decodeFromString<ClientSocketMessage>(message)) {
                 is ClientSocketMessage.CreateRoom -> {
-                    val roomId = RoomManagerService.INSTANCE.createRoom(playerId, GameFactory.GameType.RESISTANCE_GAME)
+                    val roomId = RoomManagerService.INSTANCE.createRoom(playerId, GameFactory.GameType.RESISTANCE_GAME) ?: return
                     val response = ServerSocketMessage.RoomCreated(
                         roomId = roomId
                     )
