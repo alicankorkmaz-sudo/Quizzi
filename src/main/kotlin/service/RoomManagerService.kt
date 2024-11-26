@@ -142,7 +142,8 @@ class RoomManagerService private constructor() {
         room.rounds.add(Round(roundNumber))
         val roundEnded = ServerSocketMessage.RoundStarted(
             roundNumber = roundNumber,
-            currentQuestion = room.game.currentQuestion?.toDTO()
+            timeRemaining = room.game.getRoundTime(),
+            currentQuestion = room.game.currentQuestion!!.toDTO()
         )
         broadcastToRoom(roomId, roundEnded)
         room.rounds.last().timer = CoroutineScope(Dispatchers.Default).launch {
