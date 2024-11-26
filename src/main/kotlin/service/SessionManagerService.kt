@@ -3,7 +3,9 @@ package service
 import io.ktor.websocket.*
 import kotlinx.coroutines.coroutineScope
 import kotlinx.serialization.json.Json
+import response.ErrorMessage
 import response.ServerSocketMessage
+import java.lang.Exception
 import java.util.*
 
 /**

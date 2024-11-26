@@ -1,13 +1,10 @@
 package service
 
-import io.ktor.websocket.*
-import kotlinx.coroutines.*
-import kotlinx.serialization.encodeToString
-import kotlinx.serialization.json.Json
-import model.*
 import dto.GameRoomDTO
-import response.DisconnectedPlayer
+import kotlinx.coroutines.*
+import model.*
 import response.ServerSocketMessage
+import service.internal.RoomService
 import java.util.*
 
 /**
@@ -30,12 +27,12 @@ class RoomManagerService private constructor() {
     fun createRoom(playerId: String, gameType: String): String? {
         val gameId = UUID.randomUUID().toString()
         val game = GameFactory.INSTANCE.createGame(gameId, GameFactory.CategoryType.FLAGS, gameType)
-        val creatorPlayer = PlayerManagerService.INSTANCE.getPlayer(playerId) ?: return null //TODO error would throw
+        val creatorPlayer = PlayerManagerService.INSTANCE.getPlayer(playerId)
         return roomService.createRoom(creatorPlayer, game)
     }
 
     suspend fun joinRoom(playerId: String, roomId: String): Boolean {
-        val player = PlayerManagerService.INSTANCE.getPlayer(playerId) ?: return false
+        val player = PlayerManagerService.INSTANCE.getPlayer(playerId)
         val isJoined = roomService.joinRoom(player, roomId)
         if (isJoined) {
             println("Player $playerId joined room $roomId")
@@ -46,7 +43,7 @@ class RoomManagerService private constructor() {
     }
 
     suspend fun rejoinRoom(playerId: String, roomId: String): Boolean {
-        val player = PlayerManagerService.INSTANCE.getPlayer(playerId) ?: return false
+        val player = PlayerManagerService.INSTANCE.getPlayer(playerId)
         val isRejoined = roomService.rejoinRoom(player, roomId)
         if (isRejoined) {
             println("Player $playerId joined room $roomId")
@@ -61,7 +58,7 @@ class RoomManagerService private constructor() {
     }
 
     suspend fun startGame(roomId: String) {
-        val room = roomService.getRoomById(roomId) ?: return
+        val room = roomService.getRoomById(roomId)
         //default resistanceGame start
         println("Starting game for room $roomId with ${room.players.size} players")
         if (room.players.size != room.game.maxPlayerCount()) return
@@ -85,7 +82,7 @@ class RoomManagerService private constructor() {
     }
 
     suspend fun continueGame(roomId: String) {
-        val room = roomService.getRoomById(roomId) ?: return
+        val room = roomService.getRoomById(roomId)
 
         println("Starting game for room $roomId with ${room.players.size} players")
         if (room.players.size != room.game.maxPlayerCount()) return
@@ -110,7 +107,7 @@ class RoomManagerService private constructor() {
 
     private suspend fun broadcastRoomState(roomId: String) {
         println("Broadcasting game state for room $roomId")
-        val room = roomService.getRoomById(roomId) ?: return
+        val room = roomService.getRoomById(roomId)
         val resistanceGame = room.game as ResistanceGame?
 
         val gameUpdate = ServerSocketMessage.RoomUpdate(
@@ -140,12 +137,13 @@ class RoomManagerService private constructor() {
     }
 
     private suspend fun startRound(roomId: String) {
-        val room = roomService.getRoomById(roomId) ?: return
+        val room = roomService.getRoomById(roomId)
         val roundNumber = room.rounds.size + 1
         room.rounds.add(Round(roundNumber))
         val roundEnded = ServerSocketMessage.RoundStarted(
             roundNumber = roundNumber,
-            currentQuestion = room.game.currentQuestion?.toDTO()
+            timeRemaining = room.game.getRoundTime(),
+            currentQuestion = room.game.currentQuestion!!.toDTO()
         )
         broadcastToRoom(roomId, roundEnded)
         room.rounds.last().timer = CoroutineScope(Dispatchers.Default).launch {
@@ -171,7 +169,7 @@ class RoomManagerService private constructor() {
     }
 
     private suspend fun endRound(roomId: String) {
-        val room = roomService.getRoomById(roomId) ?: return
+        val room = roomService.getRoomById(roomId)
         val answer = room.rounds.last().answer
         val answeredPlayerId = room.rounds.last().answeredPlayer?.id
         //TODO: gameleri yoneten bir yapi kurulmali
@@ -202,7 +200,7 @@ class RoomManagerService private constructor() {
 
     private suspend fun broadcastToRoom(roomId: String, message: ServerSocketMessage) {
         println("Broadcasting message to room $roomId: $message")
-        val room = roomService.getRoomById(roomId) ?: return
+        val room = roomService.getRoomById(roomId)
         val playerIds = room.players.map(Player::id).toMutableList()
         SessionManagerService.INSTANCE.broadcastToPlayers(playerIds, message)
     }
@@ -219,7 +217,7 @@ class RoomManagerService private constructor() {
     }
 
     suspend fun playerAnswered(roomId: String, playerId: String, answer: Int) {
-        val room = roomService.getRoomById(roomId) ?: return
+        val room = roomService.getRoomById(roomId)
         val question = room.game.currentQuestion ?: return
         val player = room.players.find { it.id == playerId } ?: return
 

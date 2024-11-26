@@ -81,7 +81,8 @@ sealed class ServerSocketMessage() {
     @SerialName("RoundStarted")
     data class RoundStarted(
         val roundNumber: Int,
-        val currentQuestion: QuestionDTO?
+        val timeRemaining: Long,
+        val currentQuestion: QuestionDTO
     ) : ServerSocketMessage()
 
     @Serializable
