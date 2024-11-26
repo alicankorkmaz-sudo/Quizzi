@@ -67,7 +67,6 @@ fun Application.module() {
                         }
 
                         is Frame.Close -> {
-                            println("WebSocket closed for player $playerId")
                             MessageHandler.INSTANCE.handleDisconnect(playerId)
                         }
 

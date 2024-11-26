@@ -1,8 +1,7 @@
 package service
 
-import exception.PlayerSessionNotFound
 import model.Player
-import java.util.*
+import service.internal.PlayerService
 
 /**
  * @author guvencenanguvenal
@@ -12,16 +11,12 @@ class PlayerManagerService private constructor() {
         val INSTANCE: PlayerManagerService by lazy(LazyThreadSafetyMode.SYNCHRONIZED) { PlayerManagerService() }
     }
 
-    private val players = Collections.synchronizedMap(mutableMapOf<String, Player>())
+    private val playerService: PlayerService = PlayerService()
 
-    fun createPlayer(name: String, avatarUrl: String): Player {
-        val id = UUID.randomUUID().toString()
-        val player = Player(id, name, avatarUrl)
-        players[id] = player
-        return player
-    }
+    fun createPlayer(name: String, avatarUrl: String): Player = playerService.createPlayer(name, avatarUrl)
 
-    fun deletePlayer(id: String) = players.remove(id)
+    fun deletePlayer(id: String) = playerService.deletePlayer(id)
 
-    fun getPlayer(id: String) = players[id] ?: throw PlayerSessionNotFound(id)
+    fun getPlayer(id: String) = playerService.getPlayer(id)
+
 }

@@ -1,6 +1,7 @@
 package model
 
 import data.QuestionDatabase
+import dto.PlayerDTO
 
 /**
  * @author guvencenanguvenal
@@ -21,7 +22,7 @@ class ResistanceGame(
         return currentQuestion!!
     }
 
-    override fun processAnswer(players: MutableList<Player>, answeredPlayerId: String?, answer: Int?) : Boolean {
+    override fun processAnswer(players: MutableList<PlayerDTO>, answeredPlayerId: String?, answer: Int?): Boolean {
         val isCorrect = answer == currentQuestion?.answer
 
         if (isCorrect) {

@@ -1,7 +1,7 @@
 package dto
 
 import kotlinx.serialization.Serializable
-import model.RoomState
+import enums.RoomState
 
 @Serializable
 data class GameRoomDTO(

@@ -1,8 +1,13 @@
 package service
 
 import dto.GameRoomDTO
+import dto.PlayerDTO
+import enums.PlayerState
+import enums.RoomState
 import kotlinx.coroutines.*
-import model.*
+import model.GameRoom
+import model.ResistanceGame
+import model.Round
 import response.ServerSocketMessage
 import service.internal.RoomService
 import java.util.*
@@ -55,6 +60,12 @@ class RoomManagerService private constructor() {
 
     private suspend fun cleanupRoom(room: GameRoom) {
         roomService.cleanupRoom(room)
+    }
+
+    fun playerReady(playerId: String): Boolean {
+        roomService.playerReady(playerId)
+        val roomId = roomService.getRoomIdFromPlayerId(playerId)
+        return roomService.isAllPlayerReady(roomId)
     }
 
     suspend fun startGame(roomId: String) {
@@ -201,7 +212,7 @@ class RoomManagerService private constructor() {
     private suspend fun broadcastToRoom(roomId: String, message: ServerSocketMessage) {
         println("Broadcasting message to room $roomId: $message")
         val room = roomService.getRoomById(roomId)
-        val playerIds = room.players.map(Player::id).toMutableList()
+        val playerIds = room.players.map(PlayerDTO::id).toMutableList()
         SessionManagerService.INSTANCE.broadcastToPlayers(playerIds, message)
     }
 
