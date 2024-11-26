@@ -1,3 +1,4 @@
+import exception.SocketCloseError
 import handler.MessageHandler
 import io.ktor.serialization.kotlinx.json.*
 import io.ktor.server.application.*
@@ -73,9 +74,11 @@ fun Application.module() {
                         else -> {}
                     }
                 }
-            } catch (e: Exception) {
+            } catch (e: SocketCloseError) {
                 println("Error in WebSocket connection: ${e.message}")
-                close(CloseReason(CloseReason.Codes.VIOLATED_POLICY, e.message ?: "Unexpected Error!"))
+                close(CloseReason(CloseReason.Codes.INTERNAL_ERROR, e.message))
+            } catch (e: Exception) {
+                close(CloseReason(CloseReason.Codes.VIOLATED_POLICY, "Unexpected Error!"))
             } finally {
                 println("WebSocket connection terminated for player $playerId")
                 MessageHandler.INSTANCE.handleDisconnect(playerId)

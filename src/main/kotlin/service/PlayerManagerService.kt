@@ -1,7 +1,7 @@
 package service
 
+import exception.PlayerSessionNotFound
 import model.Player
-import response.ErrorMessage
 import java.util.*
 
 /**
@@ -14,7 +14,7 @@ class PlayerManagerService private constructor() {
 
     private val players = Collections.synchronizedMap(mutableMapOf<String, Player>())
 
-    fun createPlayer(name: String, avatarUrl: String) : Player {
+    fun createPlayer(name: String, avatarUrl: String): Player {
         val id = UUID.randomUUID().toString()
         val player = Player(id, name, avatarUrl)
         players[id] = player
@@ -23,5 +23,5 @@ class PlayerManagerService private constructor() {
 
     fun deletePlayer(id: String) = players.remove(id)
 
-    fun getPlayer(id: String) = players[id] ?: throw ErrorMessage.PlayerSessionNotFound(id)
+    fun getPlayer(id: String) = players[id] ?: throw PlayerSessionNotFound(id)
 }

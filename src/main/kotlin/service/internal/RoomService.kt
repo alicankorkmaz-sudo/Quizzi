@@ -1,5 +1,6 @@
 package service.internal
 
+import exception.RoomNotFound
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -9,7 +10,6 @@ import model.GameRoom
 import model.Player
 import model.RoomState
 import response.DisconnectedPlayer
-import response.ErrorMessage
 import response.ServerSocketMessage
 import service.PlayerManagerService
 import service.SessionManagerService
@@ -28,7 +28,7 @@ class RoomService {
 
     fun getAllRooms(): MutableMap<String, GameRoom> = rooms
 
-    fun getRoomById(id: String) = rooms[id] ?: throw ErrorMessage.RoomNotFound(id)
+    fun getRoomById(id: String) = rooms[id] ?: throw RoomNotFound(id)
 
     fun getRoomIdFromPlayerId(playerId: String) = playerToRoom[playerId]
 
@@ -43,7 +43,7 @@ class RoomService {
     }
 
     fun joinRoom(player: Player, roomId: String): Boolean {
-        val room = rooms[roomId] ?: throw ErrorMessage.RoomNotFound(roomId)
+        val room = rooms[roomId] ?: throw RoomNotFound(roomId)
         if (room.players.size >= room.game.maxPlayerCount()) return false
         room.players.add(player)
         playerToRoom[player.id] = roomId
@@ -51,7 +51,7 @@ class RoomService {
     }
 
     fun rejoinRoom(player: Player, roomId: String): Boolean {
-        val room = rooms[roomId] ?: throw ErrorMessage.RoomNotFound(roomId)
+        val room = rooms[roomId] ?: throw RoomNotFound(roomId)
         disconnectedPlayers[player.id] ?: return false
         room.roomState = RoomState.PLAYING
         playerToRoom[player.id] = roomId
@@ -70,7 +70,7 @@ class RoomService {
     suspend fun playerDisconnected(playerId: String) {
         val roomId = getRoomIdFromPlayerId(playerId)
         if (roomId != null) {
-            val room = getRoomById(roomId) ?: throw ErrorMessage.RoomNotFound(roomId)
+            val room = getRoomById(roomId)
             val player = PlayerManagerService.INSTANCE.getPlayer(playerId)
             disconnectedPlayers[playerId] = DisconnectedPlayer(
                 playerId = playerId,
@@ -80,13 +80,16 @@ class RoomService {
             room.players.remove(player)
             playerToRoom.remove(playerId)
 
-            if(room.players.size == 0) {
+            if (room.players.size == 0) {
                 cleanupRoom(room)
                 return
             }
 
-            val disconnectMessage = ServerSocketMessage.PlayerDisconnected(playerId = player.id, playerName = player.name)
-            SessionManagerService.INSTANCE.broadcastToPlayers(room.players.filter { it.id != playerId }.map(Player::id).toMutableList(), disconnectMessage)
+            val disconnectMessage =
+                ServerSocketMessage.PlayerDisconnected(playerId = player.id, playerName = player.name)
+            SessionManagerService.INSTANCE.broadcastToPlayers(
+                room.players.filter { it.id != playerId }.map(Player::id).toMutableList(), disconnectMessage
+            )
 
             room.roomState = RoomState.PAUSED
             room.rounds.last().timer?.cancel()
@@ -98,7 +101,10 @@ class RoomService {
                     disconnectedPlayers.remove(playerId)
                     println("Player $playerId did not reconnect within 30 seconds, cleaning up room $roomId")
                     val message = ServerSocketMessage.RoomClosed(reason = "Player disconnected for too long")
-                    SessionManagerService.INSTANCE.broadcastToPlayers(room.players.map { playerId }.toMutableList(), message)
+                    SessionManagerService.INSTANCE.broadcastToPlayers(
+                        room.players.map { playerId }.toMutableList(),
+                        message
+                    )
                     SessionManagerService.INSTANCE.removePlayerSession(player.id)
                     cleanupRoom(room)
                 }

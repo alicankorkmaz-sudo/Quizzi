@@ -1,9 +1,8 @@
 package service
 
+import dto.GameRoomDTO
 import kotlinx.coroutines.*
 import model.*
-import dto.GameRoomDTO
-import response.ErrorMessage
 import response.ServerSocketMessage
 import service.internal.RoomService
 import java.util.*
