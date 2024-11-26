@@ -18,7 +18,7 @@ import java.util.*
 class RoomManagerService private constructor() {
     companion object {
         val INSTANCE: RoomManagerService by lazy(LazyThreadSafetyMode.SYNCHRONIZED) { RoomManagerService() }
-        val COUNTDOWN_TIME = 3L
+        const val COUNTDOWN_TIME = 3L
     }
 
     private val roomService: RoomService = RoomService()
