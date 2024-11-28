@@ -46,7 +46,7 @@ class MessageHandler private constructor() {
                 )
                 SessionManagerService.INSTANCE.broadcastToPlayers(mutableListOf(playerId), response)
                 if (success) {
-                    RoomManagerService.INSTANCE.continueGame(clientMessage.roomId)
+                    RoomManagerService.INSTANCE.startGame(clientMessage.roomId)
                 }
             }
 

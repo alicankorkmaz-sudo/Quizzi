@@ -55,8 +55,9 @@ class RoomService {
     fun rejoinRoom(player: Player, roomId: String): Boolean {
         val room = rooms[roomId] ?: throw RoomNotFound(roomId)
         disconnectedPlayers[player.id] ?: return false
-        room.roomState = RoomState.PLAYING
+        room.players.add(player.toDTO())
         playerToRoom[player.id] = roomId
+        playerReady(player.id)
         return true
     }
 
@@ -83,46 +84,44 @@ class RoomService {
 
     suspend fun playerDisconnected(playerId: String) {
         val roomId = getRoomIdFromPlayerId(playerId)
-        if (roomId != null) {
-            val room = getRoomById(roomId)
-            val player = PlayerManagerService.INSTANCE.getPlayer(playerId)
-            disconnectedPlayers[playerId] = DisconnectedPlayer(
-                playerId = playerId,
-                playerName = player.name,
-                roomId = roomId
-            )
-            room.players.remove(player.toDTO())
-            playerToRoom.remove(playerId)
+        val room = getRoomById(roomId)
+        val player = PlayerManagerService.INSTANCE.getPlayer(playerId)
+        disconnectedPlayers[playerId] = DisconnectedPlayer(
+            playerId = playerId,
+            playerName = player.name,
+            roomId = roomId
+        )
+        room.players.remove(player.toDTO())
+        playerToRoom.remove(playerId)
 
-            if (room.players.size == 0) {
+        if (room.players.size == 0) {
+            cleanupRoom(room)
+            return
+        }
+
+        val disconnectMessage =
+            ServerSocketMessage.PlayerDisconnected(playerId = player.id, playerName = player.name)
+        SessionManagerService.INSTANCE.broadcastToPlayers(
+            room.players.filter { it.id != playerId }.map(PlayerDTO::id).toMutableList(), disconnectMessage
+        )
+
+        room.roomState = RoomState.PAUSED
+        room.rounds.last().timer?.cancel()
+        //TODO ilk roundda cikarsa poatliyor
+        room.rounds.removeAt(room.rounds.size - 1)
+
+        CoroutineScope(Dispatchers.Default).launch {
+            delay(30000)
+            if (room.roomState == RoomState.PAUSED) {
+                disconnectedPlayers.remove(playerId)
+                println("Player $playerId did not reconnect within 30 seconds, cleaning up room $roomId")
+                val message = ServerSocketMessage.RoomClosed(reason = "Player disconnected for too long")
+                SessionManagerService.INSTANCE.broadcastToPlayers(
+                    room.players.map { playerId }.toMutableList(),
+                    message
+                )
+                SessionManagerService.INSTANCE.removePlayerSession(player.id)
                 cleanupRoom(room)
-                return
-            }
-
-            val disconnectMessage =
-                ServerSocketMessage.PlayerDisconnected(playerId = player.id, playerName = player.name)
-            SessionManagerService.INSTANCE.broadcastToPlayers(
-                room.players.filter { it.id != playerId }.map(PlayerDTO::id).toMutableList(), disconnectMessage
-            )
-
-            room.roomState = RoomState.PAUSED
-            room.rounds.last().timer?.cancel()
-            //TODO ilk roundda cikarsa poatliyor
-            room.rounds.removeAt(room.rounds.size - 1)
-
-            CoroutineScope(Dispatchers.Default).launch {
-                delay(30000)
-                if (room.roomState == RoomState.PAUSED) {
-                    disconnectedPlayers.remove(playerId)
-                    println("Player $playerId did not reconnect within 30 seconds, cleaning up room $roomId")
-                    val message = ServerSocketMessage.RoomClosed(reason = "Player disconnected for too long")
-                    SessionManagerService.INSTANCE.broadcastToPlayers(
-                        room.players.map { playerId }.toMutableList(),
-                        message
-                    )
-                    SessionManagerService.INSTANCE.removePlayerSession(player.id)
-                    cleanupRoom(room)
-                }
             }
         }
     }
