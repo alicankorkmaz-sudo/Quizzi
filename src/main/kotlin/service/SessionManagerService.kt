@@ -1,11 +1,8 @@
 package service
 
 import io.ktor.websocket.*
-import kotlinx.coroutines.coroutineScope
 import kotlinx.serialization.json.Json
-import response.ErrorMessage
 import response.ServerSocketMessage
-import java.lang.Exception
 import java.util.*
 
 /**
@@ -20,7 +17,7 @@ class SessionManagerService private constructor() {
 
     private val json = Json { ignoreUnknownKeys = true }
 
-    fun getPlayerSession(playerId: String) : DefaultWebSocketSession? {
+    fun getPlayerSession(playerId: String): DefaultWebSocketSession? {
         return playerSessions[playerId]
     }
 
@@ -29,7 +26,7 @@ class SessionManagerService private constructor() {
     }
 
     suspend fun removePlayerSession(playerId: String) {
-        playerSessions[playerId]?.close(reason = CloseReason(1,"Room closed"))
+        playerSessions[playerId]?.close(reason = CloseReason(1, "Room closed"))
         playerSessions.remove(playerId)
     }
 
@@ -43,8 +40,8 @@ class SessionManagerService private constructor() {
                 println("No session found for player $playerId")
             }
         }
-        sessions.forEach {
-            session ->  session.send(Frame.Text(json.encodeToString(ServerSocketMessage.serializer(), message)))
+        sessions.forEach { session ->
+            session.send(Frame.Text(json.encodeToString(ServerSocketMessage.serializer(), message)))
         }
     }
 }

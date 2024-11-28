@@ -18,53 +18,50 @@ class MessageHandler private constructor() {
     private val json = Json { ignoreUnknownKeys = true }
 
     suspend fun handleMessage(playerId: String, message: String) {
-        try {
-            when (val clientMessage = json.decodeFromString<ClientSocketMessage>(message)) {
-                is ClientSocketMessage.CreateRoom -> {
-                    val roomId = RoomManagerService.INSTANCE.createRoom(playerId, GameFactory.GameType.RESISTANCE_GAME) ?: return
-                    val response = ServerSocketMessage.RoomCreated(
-                        roomId = roomId
-                    )
-                    SessionManagerService.INSTANCE.broadcastToPlayers(mutableListOf(playerId), response)
-                }
+        when (val clientMessage = json.decodeFromString<ClientSocketMessage>(message)) {
+            is ClientSocketMessage.CreateRoom -> {
+                val roomId =
+                    RoomManagerService.INSTANCE.createRoom(playerId, GameFactory.GameType.RESISTANCE_GAME) ?: return
+                val response = ServerSocketMessage.RoomCreated(
+                    roomId = roomId
+                )
+                SessionManagerService.INSTANCE.broadcastToPlayers(mutableListOf(playerId), response)
+            }
 
-                is ClientSocketMessage.JoinRoom -> {
-                    val success = RoomManagerService.INSTANCE.joinRoom(playerId, clientMessage.roomId)
-                    val response = ServerSocketMessage.JoinedRoom(
-                        clientMessage.roomId,
-                        success = success
-                    )
-                    SessionManagerService.INSTANCE.broadcastToPlayers(mutableListOf(playerId), response)
-                    if (success) {
-                        RoomManagerService.INSTANCE.startGame(clientMessage.roomId)
-                    }
-                }
+            is ClientSocketMessage.JoinRoom -> {
+                val success = RoomManagerService.INSTANCE.joinRoom(playerId, clientMessage.roomId)
+                val response = ServerSocketMessage.JoinedRoom(
+                    clientMessage.roomId,
+                    success = success
+                )
+                SessionManagerService.INSTANCE.broadcastToPlayers(mutableListOf(playerId), response)
+            }
 
-                is ClientSocketMessage.RejoinRoom -> {
-                    val success = RoomManagerService.INSTANCE.rejoinRoom(playerId, clientMessage.roomId)
-                    val response = ServerSocketMessage.RejoinedRoom(
-                        clientMessage.roomId,
-                        playerId,
-                        success = success
-                    )
-                    SessionManagerService.INSTANCE.broadcastToPlayers(mutableListOf(playerId), response)
-                    if (success) {
-                        RoomManagerService.INSTANCE.continueGame(clientMessage.roomId)
-                    }
-                }
-
-                is ClientSocketMessage.PlayerReady -> {
-
-                }
-
-                is ClientSocketMessage.PlayerAnswer -> {
-                    val roomId = RoomManagerService.INSTANCE.getRoomIdFromPlayerId(playerId)
-                    RoomManagerService.INSTANCE.playerAnswered(roomId, playerId, clientMessage.answer)
+            is ClientSocketMessage.RejoinRoom -> {
+                val success = RoomManagerService.INSTANCE.rejoinRoom(playerId, clientMessage.roomId)
+                val response = ServerSocketMessage.RejoinedRoom(
+                    clientMessage.roomId,
+                    playerId,
+                    success = success
+                )
+                SessionManagerService.INSTANCE.broadcastToPlayers(mutableListOf(playerId), response)
+                if (success) {
+                    RoomManagerService.INSTANCE.continueGame(clientMessage.roomId)
                 }
             }
-        } catch (e: Exception) {
-            println("Error processing message: ${e.message}")
-            e.printStackTrace()
+
+            is ClientSocketMessage.PlayerReady -> {
+                val isAllPlayersReady = RoomManagerService.INSTANCE.playerReady(playerId)
+                if (isAllPlayersReady) {
+                    val roomId = RoomManagerService.INSTANCE.getRoomIdFromPlayerId(playerId)
+                    RoomManagerService.INSTANCE.startGame(roomId)
+                }
+            }
+
+            is ClientSocketMessage.PlayerAnswer -> {
+                val roomId = RoomManagerService.INSTANCE.getRoomIdFromPlayerId(playerId)
+                RoomManagerService.INSTANCE.playerAnswered(roomId, playerId, clientMessage.answer)
+            }
         }
     }
 

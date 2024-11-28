@@ -1,11 +1,12 @@
 package response
 
+import dto.PlayerDTO
 import dto.QuestionDTO
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonClassDiscriminator
 import model.Player
-import model.RoomState
+import enums.RoomState
 
 /**
  * @author guvencenanguvenal
@@ -44,7 +45,7 @@ sealed class ServerSocketMessage() {
     @Serializable
     @SerialName("RoomUpdate")
     data class RoomUpdate(
-        val players: List<Player>,
+        val players: List<PlayerDTO>,
         val state: RoomState,
         val cursorPosition: Float,
         val timeRemaining: Long? = null,
