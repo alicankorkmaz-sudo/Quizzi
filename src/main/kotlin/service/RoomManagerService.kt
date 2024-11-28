@@ -133,19 +133,7 @@ class RoomManagerService private constructor() {
     }
 
     private suspend fun nextQuestion(room: GameRoom) {
-        val question = room.game.nextQuestion()
-        //TODO: gameleri yoneten bir yapi kurulmali
-        val resistanceGame = room.game as ResistanceGame?
-
-        val gameUpdate = ServerSocketMessage.RoomUpdate(
-            players = room.players,
-            state = RoomState.PLAYING,
-            cursorPosition = resistanceGame?.cursorPosition ?: 0.5f,
-            timeRemaining = room.game.getRoundTime(),
-            currentQuestion = question.toDTO()
-        )
-
-        broadcastToRoom(room.id, gameUpdate)
+        room.game.nextQuestion()
         startRound(room.id)
     }
 
