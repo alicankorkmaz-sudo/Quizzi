@@ -101,6 +101,13 @@ class RoomService {
 
         val playersInRoom = room.players.filter { it.id != disconnectedPlayerId }.map(PlayerDTO::id).toMutableList()
 
+        val roundEndMessage = ServerSocketMessage.RoundEnded(
+            cursorPosition = room.cursorPosition,
+            correctAnswer = room.game.currentQuestion!!.answer,
+            winnerPlayerId = null
+        )
+        SessionManagerService.INSTANCE.broadcastToPlayers(playersInRoom, roundEndMessage)
+
         val disconnectMessage = ServerSocketMessage.PlayerDisconnected(
             playerId = disconnectedPlayer.id,
             playerName = disconnectedPlayer.name
@@ -110,13 +117,6 @@ class RoomService {
         room.roomState = RoomState.PAUSED
         room.rounds.last().timer?.cancel()
         room.rounds.removeAt(room.rounds.size - 1)
-
-        val roundEndMessage = ServerSocketMessage.RoundEnded(
-            cursorPosition = room.cursorPosition,
-            correctAnswer = room.game.currentQuestion!!.answer,
-            winnerPlayerId = null
-        )
-        SessionManagerService.INSTANCE.broadcastToPlayers(playersInRoom, roundEndMessage)
 
         CoroutineScope(Dispatchers.Default).launch {
             delay(30000)
