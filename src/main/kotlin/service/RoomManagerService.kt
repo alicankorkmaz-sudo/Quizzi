@@ -58,10 +58,6 @@ class RoomManagerService private constructor() {
         return false
     }
 
-    private suspend fun cleanupRoom(room: GameRoom) {
-        roomService.cleanupRoom(room)
-    }
-
     fun playerReady(playerId: String): Boolean {
         roomService.playerReady(playerId)
         val roomId = roomService.getRoomIdFromPlayerId(playerId)
@@ -144,7 +140,7 @@ class RoomManagerService private constructor() {
             broadcastToRoom(room, gameOverMessage)
 
             delay(5000)
-            cleanupRoom(room)
+            roomService.cleanupRoom(room)
         } else {
             val roundEnded = ServerSocketMessage.RoundEnded(
                 cursorPosition = resistanceGame.cursorPosition,
