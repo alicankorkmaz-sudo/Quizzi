@@ -113,6 +113,7 @@ class RoomManagerService private constructor() {
 
             println("Starting actual game for room $roomId")
             room.roomState = RoomState.PLAYING
+            broadcastRoomState(roomId)
             nextQuestion(room)
         }
     }
@@ -191,7 +192,6 @@ class RoomManagerService private constructor() {
                 winnerPlayerId = if (isCorrect) room.rounds.last().answeredPlayer?.id!! else null
             )
             broadcastToRoom(roomId, roundEnded)
-            delay(500)
             nextQuestion(room)
         }
     }

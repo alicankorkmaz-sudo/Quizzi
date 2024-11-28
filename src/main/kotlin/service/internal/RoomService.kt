@@ -107,6 +107,7 @@ class RoomService {
 
             room.roomState = RoomState.PAUSED
             room.rounds.last().timer?.cancel()
+            //TODO ilk roundda cikarsa poatliyor
             room.rounds.removeAt(room.rounds.size - 1)
 
             CoroutineScope(Dispatchers.Default).launch {
