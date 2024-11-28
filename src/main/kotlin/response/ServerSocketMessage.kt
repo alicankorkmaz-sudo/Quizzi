@@ -13,7 +13,7 @@ import enums.RoomState
  */
 @Serializable
 @JsonClassDiscriminator("type")
-sealed class ServerSocketMessage() {
+sealed class ServerSocketMessage {
 
     @Serializable
     @SerialName("RoomCreated")
@@ -47,9 +47,6 @@ sealed class ServerSocketMessage() {
     data class RoomUpdate(
         val players: List<PlayerDTO>,
         val state: RoomState,
-        val cursorPosition: Float,
-        val timeRemaining: Long? = null,
-        val currentQuestion: QuestionDTO? = null
     ) : ServerSocketMessage()
 
     @Serializable

@@ -121,13 +121,10 @@ class RoomManagerService private constructor() {
     private suspend fun broadcastRoomState(roomId: String) {
         println("Broadcasting game state for room $roomId")
         val room = roomService.getRoomById(roomId)
-        val resistanceGame = room.game as ResistanceGame?
 
         val gameUpdate = ServerSocketMessage.RoomUpdate(
             players = room.players,
             state = room.roomState,
-            cursorPosition = resistanceGame?.cursorPosition ?: 0.5f,
-            currentQuestion = room.game.currentQuestion?.toDTO()
         )
         broadcastToRoom(roomId, gameUpdate)
     }
