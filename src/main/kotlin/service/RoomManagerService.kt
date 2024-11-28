@@ -195,7 +195,7 @@ class RoomManagerService private constructor() {
                 winnerPlayerId = if (isCorrect) room.rounds.last().answeredPlayer?.id!! else null
             )
             broadcastToRoom(roomId, roundEnded)
-            delay(100)
+            delay(500)
             nextQuestion(room)
         }
     }
