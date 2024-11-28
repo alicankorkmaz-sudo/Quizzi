@@ -2,7 +2,6 @@ package service
 
 import dto.GameRoomDTO
 import dto.PlayerDTO
-import enums.PlayerState
 import enums.RoomState
 import kotlinx.coroutines.*
 import model.GameRoom
@@ -178,7 +177,7 @@ class RoomManagerService private constructor() {
         val isCorrect = room.game.processAnswer(room.players, answeredPlayerId, answer)
 
         if (resistanceGame.cursorPosition <= 0f || resistanceGame.cursorPosition >= 1f) {
-            room.roomState = RoomState.FINISHED
+            room.roomState = RoomState.CLOSED
             broadcastRoomState(roomId)
             val gameOverMessage = ServerSocketMessage.GameOver(winnerPlayerId = room.rounds.last().answeredPlayer?.id!!)
             broadcastToRoom(roomId, gameOverMessage)
