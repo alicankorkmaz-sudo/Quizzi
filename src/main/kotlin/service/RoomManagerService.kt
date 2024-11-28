@@ -25,10 +25,10 @@ class RoomManagerService private constructor() {
     private val gameScope = CoroutineScope(Dispatchers.Default + Job())
 
     fun getRoomIdFromPlayerId(playerId: String): String {
-        return roomService.getRoomIdFromPlayerId(playerId)!!
+        return roomService.getRoomIdFromPlayerId(playerId)
     }
 
-    suspend fun createRoom(playerId: String, gameType: String): String? {
+    suspend fun createRoom(playerId: String, gameType: String): String {
         val gameId = UUID.randomUUID().toString()
         val game = GameFactory.INSTANCE.createGame(gameId, GameFactory.CategoryType.FLAGS, gameType)
         val creatorPlayer = PlayerManagerService.INSTANCE.getPlayer(playerId)
@@ -89,7 +89,8 @@ class RoomManagerService private constructor() {
 
             println("Starting actual game for room $roomId")
             room.roomState = RoomState.PLAYING
-            nextQuestion(room)
+            broadcastRoomState(roomId)
+            startRound(roomId)
         }
     }
 
@@ -114,7 +115,7 @@ class RoomManagerService private constructor() {
             println("Starting actual game for room $roomId")
             room.roomState = RoomState.PLAYING
             broadcastRoomState(roomId)
-            nextQuestion(room)
+            startRound(roomId)
         }
     }
 
@@ -129,15 +130,15 @@ class RoomManagerService private constructor() {
         broadcastToRoom(roomId, gameUpdate)
     }
 
-    private suspend fun nextQuestion(room: GameRoom) {
+    private fun nextQuestion(room: GameRoom) {
         room.game.nextQuestion()
-        startRound(room.id)
     }
 
     private suspend fun startRound(roomId: String) {
         val room = roomService.getRoomById(roomId)
         val roundNumber = room.rounds.size + 1
         room.rounds.add(Round(roundNumber))
+        nextQuestion(room)
         val roundEnded = ServerSocketMessage.RoundStarted(
             roundNumber = roundNumber,
             timeRemaining = room.game.getRoundTime(),
@@ -192,7 +193,7 @@ class RoomManagerService private constructor() {
                 winnerPlayerId = if (isCorrect) room.rounds.last().answeredPlayer?.id!! else null
             )
             broadcastToRoom(roomId, roundEnded)
-            nextQuestion(room)
+            startRound(roomId)
         }
     }
 
