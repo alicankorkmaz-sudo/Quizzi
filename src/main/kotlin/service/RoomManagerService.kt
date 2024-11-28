@@ -2,7 +2,6 @@ package service
 
 import dto.GameRoomDTO
 import dto.PlayerDTO
-import enums.PlayerState
 import enums.RoomState
 import kotlinx.coroutines.*
 import model.GameRoom
@@ -121,31 +120,16 @@ class RoomManagerService private constructor() {
     private suspend fun broadcastRoomState(roomId: String) {
         println("Broadcasting game state for room $roomId")
         val room = roomService.getRoomById(roomId)
-        val resistanceGame = room.game as ResistanceGame?
 
         val gameUpdate = ServerSocketMessage.RoomUpdate(
             players = room.players,
             state = room.roomState,
-            cursorPosition = resistanceGame?.cursorPosition ?: 0.5f,
-            currentQuestion = room.game.currentQuestion?.toDTO()
         )
         broadcastToRoom(roomId, gameUpdate)
     }
 
     private suspend fun nextQuestion(room: GameRoom) {
-        val question = room.game.nextQuestion()
-        //TODO: gameleri yoneten bir yapi kurulmali
-        val resistanceGame = room.game as ResistanceGame?
-
-        val gameUpdate = ServerSocketMessage.RoomUpdate(
-            players = room.players,
-            state = RoomState.PLAYING,
-            cursorPosition = resistanceGame?.cursorPosition ?: 0.5f,
-            timeRemaining = room.game.getRoundTime(),
-            currentQuestion = question.toDTO()
-        )
-
-        broadcastToRoom(room.id, gameUpdate)
+        room.game.nextQuestion()
         startRound(room.id)
     }
 
@@ -193,7 +177,7 @@ class RoomManagerService private constructor() {
         val isCorrect = room.game.processAnswer(room.players, answeredPlayerId, answer)
 
         if (resistanceGame.cursorPosition <= 0f || resistanceGame.cursorPosition >= 1f) {
-            room.roomState = RoomState.FINISHED
+            room.roomState = RoomState.CLOSED
             broadcastRoomState(roomId)
             val gameOverMessage = ServerSocketMessage.GameOver(winnerPlayerId = room.rounds.last().answeredPlayer?.id!!)
             broadcastToRoom(roomId, gameOverMessage)
@@ -207,6 +191,7 @@ class RoomManagerService private constructor() {
                 winnerPlayerId = if (isCorrect) room.rounds.last().answeredPlayer?.id!! else null
             )
             broadcastToRoom(roomId, roundEnded)
+            delay(500)
             nextQuestion(room)
         }
     }
