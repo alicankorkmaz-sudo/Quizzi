@@ -138,8 +138,6 @@ class RoomManagerService private constructor() {
             broadcastRoomState(roomId)
             val gameOverMessage = ServerSocketMessage.GameOver(winnerPlayerId = room.rounds.last().answeredPlayer?.id!!)
             broadcastToRoom(room, gameOverMessage)
-
-            delay(5000)
             roomService.cleanupRoom(room)
         } else {
             val roundEnded = ServerSocketMessage.RoundEnded(
