@@ -4,6 +4,7 @@ import kotlinx.serialization.json.Json
 import request.ClientSocketMessage
 import response.ServerSocketMessage
 import service.GameFactory
+import service.PlayerManagerService
 import service.RoomManagerService
 import service.SessionManagerService
 
@@ -20,8 +21,13 @@ class MessageHandler private constructor() {
     suspend fun handleMessage(playerId: String, message: String) {
         when (val clientMessage = json.decodeFromString<ClientSocketMessage>(message)) {
             is ClientSocketMessage.CreateRoom -> {
+                val player = PlayerManagerService.INSTANCE.getPlayer(playerId)
                 val roomId =
-                    RoomManagerService.INSTANCE.createRoom(playerId, GameFactory.GameType.RESISTANCE_GAME)
+                    RoomManagerService.INSTANCE.createRoom(
+                        "${player.name}'s Room",
+                        playerId,
+                        GameFactory.GameType.RESISTANCE_GAME
+                    )
                 val response = ServerSocketMessage.RoomCreated(
                     roomId = roomId
                 )

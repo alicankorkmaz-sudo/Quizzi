@@ -7,6 +7,7 @@ import kotlinx.serialization.Serializable
 @Serializable
 data class GameRoom(
     val id: String,
+    val name: String,
     val game: Game,
     val players: MutableList<PlayerDTO> = mutableListOf(),
     val rounds: MutableList<Round> = mutableListOf(),
