@@ -24,7 +24,7 @@ class MessageHandler private constructor() {
                 val player = PlayerManagerService.INSTANCE.getPlayer(playerId)
                 val roomId =
                     RoomManagerService.INSTANCE.createRoom(
-                        "${player.id} 's Room",
+                        "${player.name}'s Room",
                         playerId,
                         GameFactory.GameType.RESISTANCE_GAME
                     )
