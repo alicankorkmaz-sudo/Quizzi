@@ -28,11 +28,11 @@ class RoomManagerService private constructor() {
         return roomService.getRoomIdFromPlayerId(playerId)
     }
 
-    suspend fun createRoom(playerId: String, gameType: String): String {
+    suspend fun createRoom(name: String, playerId: String, gameType: String): String {
         val gameId = UUID.randomUUID().toString()
         val game = GameFactory.INSTANCE.createGame(gameId, GameFactory.CategoryType.FLAGS, gameType)
         val creatorPlayer = PlayerManagerService.INSTANCE.getPlayer(playerId)
-        val roomId = roomService.createRoom(creatorPlayer, game)
+        val roomId = roomService.createRoom(name, creatorPlayer, game)
         broadcastRoomState(roomId)
         return roomId
     }
@@ -199,6 +199,7 @@ class RoomManagerService private constructor() {
         return roomService.getAllRooms().map { (id, room) ->
             GameRoomDTO(
                 id = id,
+                name = room.name,
                 playerCount = room.players.size,
                 roomState = room.roomState,
                 players = room.players.map { it.name }

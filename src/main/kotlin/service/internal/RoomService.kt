@@ -34,9 +34,9 @@ class RoomService {
 
     fun getRoomIdFromPlayerId(playerId: String) = playerToRoom[playerId] ?: throw RoomNotFound("from PlayerId")
 
-    fun createRoom(creator: Player, game: Game): String {
+    fun createRoom(roomName: String, creator: Player, game: Game): String {
         val roomId = UUID.randomUUID().toString()
-        val room = GameRoom(roomId, game)
+        val room = GameRoom(roomId, roomName, game)
         room.players.add(creator.toDTO())
         rooms[roomId] = room
         playerToRoom[creator.id] = roomId
