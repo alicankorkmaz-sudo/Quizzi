@@ -1,6 +1,5 @@
 package service.internal
 
-import dto.PlayerDTO
 import enums.PlayerState
 import enums.RoomState
 import exception.RoomNotFound
@@ -8,10 +7,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import model.Game
-import model.GameRoom
-import model.Player
-import model.ResistanceGame
+import model.*
 import response.DisconnectedPlayer
 import response.ServerSocketMessage
 import service.PlayerManagerService
@@ -38,7 +34,7 @@ class RoomService {
     fun createRoom(roomName: String, creator: Player, game: Game): String {
         val roomId = UUID.randomUUID().toString()
         val room = GameRoom(roomId, roomName, game)
-        room.players.add(creator.toDTO())
+        room.players.add(PlayerInRoom(creator, 0))
         rooms[roomId] = room
         playerToRoom[creator.id] = roomId
         println("Room $roomId created by player ${creator.id}")
@@ -48,7 +44,7 @@ class RoomService {
     fun joinRoom(player: Player, roomId: String): Boolean {
         val room = rooms[roomId] ?: throw RoomNotFound(roomId)
         if (room.players.size >= room.game.maxPlayerCount()) return false
-        room.players.add(player.toDTO())
+        room.players.add(PlayerInRoom(player, room.players.size))
         playerToRoom[player.id] = roomId
         return true
     }
@@ -56,7 +52,7 @@ class RoomService {
     fun rejoinRoom(player: Player, roomId: String): Boolean {
         val room = rooms[roomId] ?: throw RoomNotFound(roomId)
         disconnectedPlayers[player.id] ?: return false
-        room.players.add(player.toDTO())
+        room.players.add(PlayerInRoom(player, room.players.size))
         playerToRoom[player.id] = roomId
         playerReady(player.id)
         return true
@@ -92,7 +88,7 @@ class RoomService {
             playerName = disconnectedPlayer.name,
             roomId = roomId
         )
-        room.players.remove(disconnectedPlayer.toDTO())
+        room.players.remove(PlayerInRoom(disconnectedPlayer, 0))
         playerToRoom.remove(disconnectedPlayerId)
 
         if (room.players.size == 0) {
@@ -100,7 +96,7 @@ class RoomService {
             return
         }
 
-        val playersInRoom = room.players.filter { it.id != disconnectedPlayerId }.map(PlayerDTO::id).toMutableList()
+        val playersInRoom = room.players.filter { it.id != disconnectedPlayerId }.map(PlayerInRoom::id).toMutableList()
         val resistanceGame = room.game as ResistanceGame
 
         val roundEndMessage = ServerSocketMessage.RoundEnded(

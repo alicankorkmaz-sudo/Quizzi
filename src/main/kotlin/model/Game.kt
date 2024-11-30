@@ -14,7 +14,7 @@ abstract class Game(
 ) {
     abstract fun nextQuestion(): Question
 
-    abstract fun processAnswer(players: MutableList<PlayerDTO>, answeredPlayerId: String?, answer: Int?): Boolean
+    abstract fun processAnswer(answeredPlayer: PlayerInRoom, answer: Int)
 
     abstract fun getRoundTime(): Long
 
@@ -23,4 +23,6 @@ abstract class Game(
     abstract fun nextRound(): Round
 
     abstract fun getLastRound(): Round
+
+    abstract fun isGameOver(): Boolean
 }

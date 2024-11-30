@@ -1,7 +1,6 @@
 package model
 
 import data.QuestionDatabase
-import dto.PlayerDTO
 
 /**
  * @author guvencenanguvenal
@@ -22,26 +21,28 @@ class ResistanceGame(
         return QuestionDatabase.getRandomQuestion(categoryId)
     }
 
-    override fun processAnswer(players: MutableList<PlayerDTO>, answeredPlayerId: String?, answer: Int?): Boolean {
+    override fun processAnswer(answeredPlayer: PlayerInRoom, answer: Int) {
+        val round = getLastRound()
         val isCorrect = answer == getLastRound().question.answer
 
-        if (isCorrect) {
-            val correctPlayer = players.find { p ->
-                p.id == answeredPlayerId
-            }
+        //hali hazirda kazanan varsa ikinci yaniti handle etme
+        if (round.winnerPlayer != null) {
+            return
+        }
 
-            if (correctPlayer != null) {
-                val currentPosition = cursorPosition
-                val movement = if (players.indexOf(correctPlayer) == 0) -0.1f else 0.1f
-                val newPosition = currentPosition + movement
-                cursorPosition = when {
-                    newPosition <= 0.1f -> 0f  // Sol limit
-                    newPosition >= 0.9f -> 1f  // Sağ limit
-                    else -> newPosition
-                }
+        round.playerAnswers.add(PlayerAnswer(answeredPlayer.id, answer))
+        if (isCorrect) {
+            round.winnerPlayer = answeredPlayer.toPlayer()
+
+            val currentPosition = cursorPosition
+            val movement = if (answeredPlayer.index == 0) -0.1f else 0.1f
+            val newPosition = currentPosition + movement
+            cursorPosition = when {
+                newPosition <= 0.1f -> 0f  // Sol limit
+                newPosition >= 0.9f -> 1f  // Sağ limit
+                else -> newPosition
             }
         }
-        return isCorrect
     }
 
     override fun getRoundTime(): Long {
@@ -61,5 +62,9 @@ class ResistanceGame(
 
     override fun getLastRound(): Round {
         return rounds.last()
+    }
+
+    override fun isGameOver(): Boolean {
+        return cursorPosition <= 0f || cursorPosition >= 1f
     }
 }

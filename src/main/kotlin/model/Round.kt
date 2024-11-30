@@ -1,6 +1,5 @@
 package model
 
-import dto.PlayerDTO
 import kotlinx.coroutines.Job
 import kotlinx.serialization.Serializable
 
@@ -14,5 +13,5 @@ data class Round(
     var job: Job? = null,
     var answer: Int? = null,
     val playerAnswers: MutableList<PlayerAnswer> = mutableListOf(),
-    var winnerPlayer: PlayerDTO? = null
+    var winnerPlayer: Player? = null
 )

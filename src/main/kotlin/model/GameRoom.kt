@@ -1,6 +1,5 @@
 package model
 
-import dto.PlayerDTO
 import enums.RoomState
 import kotlinx.serialization.Serializable
 
@@ -9,6 +8,6 @@ data class GameRoom(
     val id: String,
     val name: String,
     val game: Game,
-    val players: MutableList<PlayerDTO> = mutableListOf(),
+    val players: MutableList<PlayerInRoom> = mutableListOf(),
     var roomState: RoomState = RoomState.WAITING,
 )
