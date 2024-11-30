@@ -146,6 +146,7 @@ class RoomManagerService private constructor() {
             broadcastToRoom(room, gameOverMessage)
             roomService.cleanupRoom(room)
         } else {
+            delay(500)
             startRound(roomId)
         }
     }
