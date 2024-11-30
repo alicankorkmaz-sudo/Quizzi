@@ -64,7 +64,7 @@ class RoomManagerService private constructor() {
         return roomService.isAllPlayerReady(roomId)
     }
 
-    suspend fun startGame(roomId: String) {
+    fun startGame(roomId: String) {
         val room = roomService.getRoomById(roomId)
         println("Starting game for room $roomId with ${room.players.size} players")
         if (room.players.size != room.game.maxPlayerCount()) return
@@ -132,6 +132,13 @@ class RoomManagerService private constructor() {
 
         val isCorrect = room.game.processAnswer(room.players, answeredPlayerId, answer)
 
+        val roundEnded = ServerSocketMessage.RoundEnded(
+            cursorPosition = resistanceGame.cursorPosition,
+            correctAnswer = resistanceGame.currentQuestion!!.answer,
+            winnerPlayerId = if (isCorrect) round.answeredPlayer?.id!! else null
+        )
+        broadcastToRoom(room, roundEnded)
+
         if (resistanceGame.cursorPosition <= 0f || resistanceGame.cursorPosition >= 1f) {
             room.roomState = RoomState.CLOSED
             broadcastRoomState(roomId)
@@ -139,12 +146,6 @@ class RoomManagerService private constructor() {
             broadcastToRoom(room, gameOverMessage)
             roomService.cleanupRoom(room)
         } else {
-            val roundEnded = ServerSocketMessage.RoundEnded(
-                cursorPosition = resistanceGame.cursorPosition,
-                correctAnswer = resistanceGame.currentQuestion!!.answer,
-                winnerPlayerId = if (isCorrect) round.answeredPlayer?.id!! else null
-            )
-            broadcastToRoom(room, roundEnded)
             startRound(roomId)
         }
     }
