@@ -53,4 +53,16 @@ class ResistanceGame(
     override fun maxPlayerCount(): Int {
         return MAX_PLAYERS
     }
+
+    override fun nextRound(): Round {
+        val roundNumber = rounds.size + 1
+        val round = Round(roundNumber)
+        rounds.add(round)
+        nextQuestion()
+        return round
+    }
+
+    override fun getLastRound(): Round {
+        return rounds.last()
+    }
 }

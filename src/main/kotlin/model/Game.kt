@@ -20,4 +20,8 @@ abstract class Game(
     abstract fun getRoundTime(): Long
 
     abstract fun maxPlayerCount(): Int
+
+    abstract fun nextRound(): Round
+
+    abstract fun getLastRound(): Round
 }

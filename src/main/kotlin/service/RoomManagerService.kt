@@ -93,16 +93,14 @@ class RoomManagerService private constructor() {
 
     private suspend fun startRound(roomId: String) {
         val room = roomService.getRoomById(roomId)
-        val roundNumber = room.game.rounds.size + 1
-        room.game.rounds.add(Round(roundNumber))
-        nextQuestion(room)
+        val round = room.game.nextRound()
         val roundEnded = ServerSocketMessage.RoundStarted(
-            roundNumber = roundNumber,
+            roundNumber = round.number,
             timeRemaining = room.game.getRoundTime(),
             currentQuestion = room.game.currentQuestion!!.toDTO()
         )
         broadcastToRoom(room, roundEnded)
-        room.game.rounds.last().timer = CoroutineScope(Dispatchers.Default).launch {
+        round.timer = CoroutineScope(Dispatchers.Default).launch {
             try {
                 for (timeLeft in room.game.getRoundTime() - 1 downTo 1) {
                     delay(1000)
@@ -111,7 +109,7 @@ class RoomManagerService private constructor() {
                 }
                 delay(1000)
                 // Süre doldu
-                room.game.rounds.last().answer = null
+                round.answer = null
                 // Süre doldu mesajı
                 val timeUpMessage = ServerSocketMessage.TimeUp(correctAnswer = room.game.currentQuestion?.answer!!)
                 broadcastToRoom(room, timeUpMessage)
@@ -124,34 +122,31 @@ class RoomManagerService private constructor() {
 
     private suspend fun endRound(roomId: String) {
         val room = roomService.getRoomById(roomId)
-        val answer = room.game.rounds.last().answer
-        val answeredPlayerId = room.game.rounds.last().answeredPlayer?.id
+        val round = room.game.getLastRound()
+        val answer = round.answer
+        val answeredPlayerId = round.answeredPlayer?.id
         //TODO: gameleri yoneten bir yapi kurulmali
         val resistanceGame = room.game as ResistanceGame
 
-        room.game.rounds.last().timer?.cancel()
+        round.timer?.cancel()
 
         val isCorrect = room.game.processAnswer(room.players, answeredPlayerId, answer)
 
         if (resistanceGame.cursorPosition <= 0f || resistanceGame.cursorPosition >= 1f) {
             room.roomState = RoomState.CLOSED
             broadcastRoomState(roomId)
-            val gameOverMessage = ServerSocketMessage.GameOver(winnerPlayerId = room.game.rounds.last().answeredPlayer?.id!!)
+            val gameOverMessage = ServerSocketMessage.GameOver(winnerPlayerId = round.answeredPlayer?.id!!)
             broadcastToRoom(room, gameOverMessage)
             roomService.cleanupRoom(room)
         } else {
             val roundEnded = ServerSocketMessage.RoundEnded(
                 cursorPosition = resistanceGame.cursorPosition,
                 correctAnswer = resistanceGame.currentQuestion!!.answer,
-                winnerPlayerId = if (isCorrect) room.game.rounds.last().answeredPlayer?.id!! else null
+                winnerPlayerId = if (isCorrect) round.answeredPlayer?.id!! else null
             )
             broadcastToRoom(room, roundEnded)
             startRound(roomId)
         }
-    }
-
-    private fun nextQuestion(room: GameRoom) {
-        room.game.nextQuestion()
     }
 
     suspend fun playerAnswered(roomId: String, playerId: String, answer: Int) {
