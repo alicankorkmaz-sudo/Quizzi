@@ -17,4 +17,8 @@ data class PlayerDTO(val id: String, val name: String, val avatarUrl: String, va
         val otherPlayer: PlayerDTO = other as PlayerDTO
         return otherPlayer.id == id
     }
+
+    override fun hashCode(): Int {
+        return javaClass.hashCode()
+    }
 }
