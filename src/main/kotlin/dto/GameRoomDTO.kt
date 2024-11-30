@@ -9,5 +9,5 @@ data class GameRoomDTO(
     val name: String,
     val playerCount: Int,
     val roomState: RoomState,
-    val players: List<String> // oyuncu isimleri
+    val players: List<String>
 )
