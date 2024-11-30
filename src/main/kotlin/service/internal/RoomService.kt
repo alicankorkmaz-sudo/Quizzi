@@ -65,8 +65,8 @@ class RoomService {
     suspend fun cleanupRoom(room: GameRoom) {
         room.players.forEach { player -> SessionManagerService.INSTANCE.removePlayerSession(player.id) }
         // Oda verilerini temizle
-        if (room.rounds.size > 0) {
-            room.rounds.last().timer?.cancel()
+        if (room.game.rounds.size > 0) {
+            room.game.rounds.last().timer?.cancel()
         }
         rooms.remove(room.id)
     }
@@ -117,8 +117,8 @@ class RoomService {
         SessionManagerService.INSTANCE.broadcastToPlayers(playersInRoom, disconnectMessage)
 
         room.roomState = RoomState.PAUSED
-        room.rounds.last().timer?.cancel()
-        room.rounds.removeAt(room.rounds.size - 1)
+        room.game.rounds.last().timer?.cancel()
+        room.game.rounds.removeAt(room.game.rounds.size - 1)
 
         CoroutineScope(Dispatchers.Default).launch {
             delay(30000)
