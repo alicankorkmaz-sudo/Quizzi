@@ -96,10 +96,10 @@ class RoomManagerService private constructor() {
         val roundStarted = ServerSocketMessage.RoundStarted(
             roundNumber = round.number,
             timeRemaining = room.game.getRoundTime(),
-            currentQuestion = room.game.currentQuestion!!.toDTO()
+            currentQuestion = room.game.getLastRound().question.toDTO()
         )
         broadcastToRoom(room, roundStarted)
-        round.timer = CoroutineScope(Dispatchers.Default).launch {
+        round.job = CoroutineScope(Dispatchers.Default).launch {
             try {
                 for (timeLeft in room.game.getRoundTime() - 1 downTo 1) {
                     delay(1000)
@@ -110,7 +110,7 @@ class RoomManagerService private constructor() {
                 // Süre doldu
                 round.answer = null
                 // Süre doldu mesajı
-                val timeUpMessage = ServerSocketMessage.TimeUp(correctAnswer = room.game.currentQuestion?.answer!!)
+                val timeUpMessage = ServerSocketMessage.TimeUp(correctAnswer = room.game.getLastRound().question.answer)
                 broadcastToRoom(room, timeUpMessage)
 
                 //TODO: gameleri yoneten bir yapi kurulmali
@@ -118,7 +118,7 @@ class RoomManagerService private constructor() {
 
                 val roundEnded = ServerSocketMessage.RoundEnded(
                     cursorPosition = resistanceGame.cursorPosition,
-                    correctAnswer = resistanceGame.currentQuestion!!.answer,
+                    correctAnswer = resistanceGame.getLastRound().question.answer,
                     winnerPlayerId = null
                 )
                 broadcastToRoom(room, roundEnded)
@@ -133,25 +133,25 @@ class RoomManagerService private constructor() {
     private suspend fun interruptRound(roomId: String) {
         val room = roomService.getRoomById(roomId)
         val round = room.game.getLastRound()
-        round.timer?.cancel()
+        round.job?.cancel()
 
         val answer = round.answer
-        val answeredPlayerId = round.answeredPlayer?.id
+        val answeredPlayerId = round.winnerPlayer?.id
         //TODO: gameleri yoneten bir yapi kurulmali
         val resistanceGame = room.game as ResistanceGame
         val isCorrect = room.game.processAnswer(room.players, answeredPlayerId, answer)
 
         val roundEnded = ServerSocketMessage.RoundEnded(
             cursorPosition = resistanceGame.cursorPosition,
-            correctAnswer = resistanceGame.currentQuestion!!.answer,
-            winnerPlayerId = if (isCorrect) round.answeredPlayer?.id!! else null
+            correctAnswer = resistanceGame.getLastRound().question.answer,
+            winnerPlayerId = if (isCorrect) round.winnerPlayer?.id!! else null
         )
         broadcastToRoom(room, roundEnded)
 
         if (resistanceGame.cursorPosition <= 0f || resistanceGame.cursorPosition >= 1f) {
             room.roomState = RoomState.CLOSED
             broadcastRoomState(roomId)
-            val gameOverMessage = ServerSocketMessage.GameOver(winnerPlayerId = round.answeredPlayer?.id!!)
+            val gameOverMessage = ServerSocketMessage.GameOver(winnerPlayerId = round.winnerPlayer?.id!!)
             broadcastToRoom(room, gameOverMessage)
             roomService.cleanupRoom(room)
         } else {
@@ -162,7 +162,7 @@ class RoomManagerService private constructor() {
 
     suspend fun playerAnswered(roomId: String, playerId: String, answer: Int) {
         val room = roomService.getRoomById(roomId)
-        val question = room.game.currentQuestion ?: return
+        val question = room.game.getLastRound().question
         val player = room.players.find { it.id == playerId } ?: return
 
         //iki kullanici da bilemedi
@@ -183,7 +183,7 @@ class RoomManagerService private constructor() {
         }
 
         room.game.rounds.last().answer = answer
-        room.game.rounds.last().answeredPlayer = player
+        room.game.rounds.last().winnerPlayer = player
 
         val answerResult = ServerSocketMessage.AnswerResult(
             playerId = player.id,

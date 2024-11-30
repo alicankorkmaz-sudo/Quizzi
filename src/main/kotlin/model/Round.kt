@@ -10,7 +10,9 @@ import kotlinx.serialization.Serializable
 @Serializable
 data class Round(
     val number: Int,
-    var timer: Job? = null,
+    val question: Question,
+    var job: Job? = null,
     var answer: Int? = null,
-    var answeredPlayer: PlayerDTO? = null
+    val playerAnswers: MutableList<PlayerAnswer> = mutableListOf(),
+    var winnerPlayer: PlayerDTO? = null
 )
