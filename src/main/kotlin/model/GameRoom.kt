@@ -12,5 +12,4 @@ data class GameRoom(
     val players: MutableList<PlayerDTO> = mutableListOf(),
     val rounds: MutableList<Round> = mutableListOf(),
     var roomState: RoomState = RoomState.WAITING,
-    var cursorPosition: Float = 0.5f
 )

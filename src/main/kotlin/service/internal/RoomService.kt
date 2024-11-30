@@ -11,6 +11,7 @@ import kotlinx.coroutines.launch
 import model.Game
 import model.GameRoom
 import model.Player
+import model.ResistanceGame
 import response.DisconnectedPlayer
 import response.ServerSocketMessage
 import service.PlayerManagerService
@@ -100,9 +101,10 @@ class RoomService {
         }
 
         val playersInRoom = room.players.filter { it.id != disconnectedPlayerId }.map(PlayerDTO::id).toMutableList()
+        val resistanceGame = room.game as ResistanceGame
 
         val roundEndMessage = ServerSocketMessage.RoundEnded(
-            cursorPosition = room.cursorPosition,
+            cursorPosition = resistanceGame.cursorPosition,
             correctAnswer = room.game.currentQuestion!!.answer,
             winnerPlayerId = null
         )
