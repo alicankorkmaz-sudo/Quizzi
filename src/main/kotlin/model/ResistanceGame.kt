@@ -9,13 +9,15 @@ import dto.PlayerDTO
 class ResistanceGame(
     id: String,
     categoryId: Int,
+    rounds: MutableList<Round> = mutableListOf(),
     currentQuestion: Question? = null,
     var cursorPosition: Float = 0.5f
-) : Game(id, categoryId, currentQuestion) {
+) : Game(id, categoryId, rounds, currentQuestion) {
 
-    private val ROUND_TIME_SECONDS = 20L
-
-    private val MAX_PLAYERS = 2
+    companion object {
+        private const val ROUND_TIME_SECONDS = 20L
+        private const val MAX_PLAYERS = 2
+    }
 
     override fun nextQuestion(): Question {
         currentQuestion = QuestionDatabase.getRandomQuestion(categoryId)
@@ -50,5 +52,17 @@ class ResistanceGame(
 
     override fun maxPlayerCount(): Int {
         return MAX_PLAYERS
+    }
+
+    override fun nextRound(): Round {
+        val roundNumber = rounds.size + 1
+        val round = Round(roundNumber)
+        rounds.add(round)
+        nextQuestion()
+        return round
+    }
+
+    override fun getLastRound(): Round {
+        return rounds.last()
     }
 }
