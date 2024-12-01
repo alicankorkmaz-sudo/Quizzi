@@ -38,7 +38,7 @@ class ResistanceGame(
                 val newPosition = currentPosition + movement
                 cursorPosition = when {
                     newPosition <= 0.1f -> 0f  // Sol limit
-                    newPosition >= 0.9f -> 1.6f  // Sağ limit
+                    newPosition >= 0.9f -> 1f  // Sağ limit
                     else -> newPosition
                 }
             }
