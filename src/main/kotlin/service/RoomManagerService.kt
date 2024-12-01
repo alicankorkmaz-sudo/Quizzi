@@ -131,12 +131,10 @@ class RoomManagerService private constructor() {
 
         round.timer?.cancel()
 
-        val isCorrect = room.game.processAnswer(room.players, answeredPlayerId, answer)
-
         val roundEnded = ServerSocketMessage.RoundEnded(
             cursorPosition = resistanceGame.cursorPosition,
             correctAnswer = resistanceGame.currentQuestion!!.answer,
-            winnerPlayerId = if (isCorrect) round.answeredPlayer?.id!! else null
+            winnerPlayerId = round.answeredPlayer?.id
         )
         broadcastToRoom(room, roundEnded)
 
@@ -174,6 +172,8 @@ class RoomManagerService private constructor() {
         if (question.answer == room.game.rounds.last().answer) {
             return
         }
+
+        room.game.processAnswer(room.players, player.id, answer)
 
         room.game.rounds.last().answer = answer
         room.game.rounds.last().answeredPlayer = player
