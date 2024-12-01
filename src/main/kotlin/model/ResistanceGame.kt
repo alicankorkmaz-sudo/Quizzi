@@ -15,7 +15,7 @@ class ResistanceGame(
 ) : Game(id, categoryId, rounds, currentQuestion) {
 
     companion object {
-        private const val ROUND_TIME_SECONDS = 20L
+        private const val ROUND_TIME_SECONDS = 10L
         private const val MAX_PLAYERS = 2
     }
 
