@@ -113,6 +113,7 @@ class RoomManagerService private constructor() {
                 // Süre doldu mesajı
                 val timeUpMessage = ServerSocketMessage.TimeUp(correctAnswer = room.game.currentQuestion?.answer!!)
                 broadcastToRoom(room, timeUpMessage)
+                delay(1000)
                 endRound(roomId)
             } catch (e: CancellationException) {
                 // Timer iptal edildi
@@ -139,7 +140,8 @@ class RoomManagerService private constructor() {
         )
         broadcastToRoom(room, roundEnded)
 
-        if (resistanceGame.cursorPosition <= 0f || resistanceGame.cursorPosition >= 1f) {
+        if (resistanceGame.cursorPosition <= 0f || resistanceGame.cursorPosition >= 1.6f) {
+            delay(500)
             room.roomState = RoomState.CLOSED
             broadcastRoomState(roomId)
             val gameOverMessage = ServerSocketMessage.GameOver(winnerPlayerId = round.answeredPlayer?.id!!)
@@ -163,6 +165,7 @@ class RoomManagerService private constructor() {
                 correct = false
             )
             broadcastToRoom(room, answerResult)
+            delay(1000)
             endRound(roomId)
             return
         }
