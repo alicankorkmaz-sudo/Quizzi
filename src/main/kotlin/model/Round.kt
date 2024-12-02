@@ -1,6 +1,5 @@
 package model
 
-import dto.PlayerDTO
 import exception.AlreadyAnswered
 import kotlinx.coroutines.Job
 import kotlinx.serialization.Serializable
@@ -44,6 +43,4 @@ data class Round(
 
         return false
     }
-
-
 }

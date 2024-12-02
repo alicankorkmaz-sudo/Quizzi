@@ -69,7 +69,7 @@ class RoomService {
         room.players.forEach { player -> SessionManagerService.INSTANCE.removePlayerSession(player.id) }
         // Oda verilerini temizle
         if (room.game.rounds.size > 0) {
-            room.game.rounds.last().job?.cancel()
+            room.game.rounds.filter { r -> r.job?.isActive == true }.forEach { r -> r.job?.cancel() }
         }
         rooms.remove(room.id)
     }
@@ -99,7 +99,7 @@ class RoomService {
             playerName = disconnectedPlayer.name,
             roomId = roomId
         )
-        room.players.remove(disconnectedPlayer.toDTO())
+        room.removePlayer(disconnectedPlayer.id)
         playerToRoom.remove(disconnectedPlayerId)
 
         if (room.players.size == 0) {

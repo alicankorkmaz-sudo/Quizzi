@@ -12,13 +12,13 @@ abstract class Game(
     val categoryId: Int,
     val rounds: MutableList<Round> = mutableListOf()
 ) {
-    abstract fun nextQuestion(): Question
+    abstract fun gameOver(): Boolean
 
     abstract fun calculateResult(players: MutableList<PlayerDTO>)
 
-    abstract fun getRoundTime(): Long
-
     abstract fun maxPlayerCount(): Int
+
+    abstract fun getRoundTime(): Long
 
     abstract fun nextRound(): Round
 

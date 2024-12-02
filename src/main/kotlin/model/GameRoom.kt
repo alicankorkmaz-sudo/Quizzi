@@ -13,6 +13,10 @@ data class GameRoom(
     val players: MutableList<PlayerDTO> = mutableListOf(),
     var roomState: RoomState = RoomState.WAITING,
 ) {
+    fun removePlayer(playerId: String) {
+        players.removeIf { p -> p.id == playerId}
+    }
+
     fun isAllPlayerReady(): Boolean {
         val notReadyPlayers = players.filter { player -> player.state == PlayerState.WAIT }.size
         return (notReadyPlayers == 0) && (game.maxPlayerCount() == players.size)
