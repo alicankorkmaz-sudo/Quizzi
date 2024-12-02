@@ -3,6 +3,7 @@ package service
 import dto.GameRoomDTO
 import dto.PlayerDTO
 import enums.RoomState
+import exception.WrongCommandWrongTime
 import kotlinx.coroutines.*
 import model.GameRoom
 import model.Player
@@ -132,7 +133,9 @@ class RoomManagerService private constructor() {
                 broadcastToRoom(room, roundEnded)
 
                 delay(3000)
-                processRound(room)
+                if (room.roomState == RoomState.PLAYING) {
+                    processRound(room)
+                }
             } catch (e: CancellationException) {
                 // Timer iptal edildi
             }
@@ -155,11 +158,14 @@ class RoomManagerService private constructor() {
         broadcastToRoom(room, roundEnded)
 
         delay(3000)
-        processRound(room)
+        if (room.roomState == RoomState.PLAYING) {
+            processRound(room)
+        }
     }
 
     suspend fun playerAnswered(roomId: String, playerId: String, answer: Int) {
         val room = roomService.getRoomById(roomId)
+        if (room.roomState != RoomState.PLAYING) throw WrongCommandWrongTime()
         val lastRound = room.game.getLastRound()
         val player = room.players.find { it.id == playerId } ?: return
 
