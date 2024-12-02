@@ -22,26 +22,21 @@ class ResistanceGame(
         return QuestionDatabase.getRandomQuestion(categoryId)
     }
 
-    override fun processAnswer(players: MutableList<PlayerDTO>, answeredPlayerId: String?, answer: Int?): Boolean {
-        val isCorrect = answer == getLastRound().question.answer
+    override fun calculateResult(players: MutableList<PlayerDTO>) {
+        val lastRound = getLastRound()
 
-        if (isCorrect) {
-            val correctPlayer = players.find { p ->
-                p.id == answeredPlayerId
-            }
+        val roundWinnerPlayer = lastRound.roundWinnerPlayer()
 
-            if (correctPlayer != null) {
-                val currentPosition = cursorPosition
-                val movement = if (players.indexOf(correctPlayer) == 0) -0.1f else 0.1f
-                val newPosition = currentPosition + movement
-                cursorPosition = when {
-                    newPosition <= 0.1f -> 0f  // Sol limit
-                    newPosition >= 0.9f -> 1f  // Sağ limit
-                    else -> newPosition
-                }
+        if (roundWinnerPlayer != null) {
+            val currentPosition = cursorPosition
+            val movement = if (players.indexOf(roundWinnerPlayer.toDTO()) == 0) -0.1f else 0.1f
+            val newPosition = currentPosition + movement
+            cursorPosition = when {
+                newPosition <= 0.1f -> 0f  // Sol limit
+                newPosition >= 0.9f -> 1f  // Sağ limit
+                else -> newPosition
             }
         }
-        return isCorrect
     }
 
     override fun getRoundTime(): Long {

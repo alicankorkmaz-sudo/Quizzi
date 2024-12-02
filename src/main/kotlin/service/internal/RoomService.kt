@@ -4,6 +4,7 @@ import dto.PlayerDTO
 import enums.PlayerState
 import enums.RoomState
 import exception.RoomNotFound
+import exception.SameCommandResented
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -48,6 +49,7 @@ class RoomService {
     fun joinRoom(player: Player, roomId: String): Boolean {
         val room = rooms[roomId] ?: throw RoomNotFound(roomId)
         if (room.players.size >= room.game.maxPlayerCount()) return false
+        if (room.roomState != RoomState.WAITING) throw SameCommandResented()
         room.players.add(player.toDTO())
         playerToRoom[player.id] = roomId
         return true
@@ -56,6 +58,7 @@ class RoomService {
     fun rejoinRoom(player: Player, roomId: String): Boolean {
         val room = rooms[roomId] ?: throw RoomNotFound(roomId)
         disconnectedPlayers[player.id] ?: return false
+        if (room.roomState != RoomState.PAUSED) throw SameCommandResented()
         room.players.add(player.toDTO())
         playerToRoom[player.id] = roomId
         playerReady(player.id)
@@ -74,13 +77,17 @@ class RoomService {
     fun playerReady(playerId: String) {
         val roomId = getRoomIdFromPlayerId(playerId)
         val room = getRoomById(roomId)
-        room.players.filter { player -> player.id == playerId }.forEach { player -> player.state = PlayerState.READY }
+        if (room.roomState != RoomState.WAITING && room.roomState != RoomState.PAUSED) {
+            throw SameCommandResented()
+        }
+        room.players
+            .filter { player -> player.id == playerId }
+            .forEach { player -> player.state = PlayerState.READY }
     }
 
     fun isAllPlayerReady(roomId: String): Boolean {
         val room = getRoomById(roomId)
-        val notReadyPlayers = room.players.filter { player -> player.state == PlayerState.WAIT }.size
-        return (notReadyPlayers == 0) && (room.game.maxPlayerCount() == room.players.size)
+        return room.isAllPlayerReady()
     }
 
     suspend fun playerDisconnected(disconnectedPlayerId: String) {
