@@ -6,4 +6,4 @@ import kotlinx.serialization.Serializable
  * @author guvencenanguvenal
  */
 @Serializable
-open class SocketCloseError(override val message: String) : Exception(message)
+open class BusinessError(override val message: String) : Exception(message)

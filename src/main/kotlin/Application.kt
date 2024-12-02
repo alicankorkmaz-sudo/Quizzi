@@ -1,3 +1,4 @@
+import exception.BusinessError
 import exception.SocketCloseError
 import handler.MessageHandler
 import io.ktor.serialization.kotlinx.json.*
