@@ -11,7 +11,7 @@ import kotlinx.serialization.Serializable
 data class Round(
     val number: Int,
     val question: Question,
-    var timer: Job? = null,
+    var job: Job? = null,
     var answer: Int? = null,
     var answeredPlayer: PlayerDTO? = null
 )

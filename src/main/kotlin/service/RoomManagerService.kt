@@ -99,7 +99,7 @@ class RoomManagerService private constructor() {
             currentQuestion = room.game.getLastRound().question.toDTO()
         )
         broadcastToRoom(room, roundStarted)
-        round.timer = CoroutineScope(Dispatchers.Default).launch {
+        round.job = CoroutineScope(Dispatchers.Default).launch {
             try {
                 for (timeLeft in room.game.getRoundTime() - 1 downTo 1) {
                     delay(1000)
@@ -127,7 +127,7 @@ class RoomManagerService private constructor() {
         //TODO: gameleri yoneten bir yapi kurulmali
         val resistanceGame = room.game as ResistanceGame
 
-        round.timer?.cancel()
+        round.job?.cancel()
 
         val isCorrect = room.game.processAnswer(room.players, answeredPlayerId, answer)
 
