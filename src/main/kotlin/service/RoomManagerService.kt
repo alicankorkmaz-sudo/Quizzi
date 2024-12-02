@@ -6,7 +6,6 @@ import enums.RoomState
 import kotlinx.coroutines.*
 import model.GameRoom
 import model.ResistanceGame
-import model.Round
 import response.ServerSocketMessage
 import service.internal.RoomService
 import java.util.*
@@ -97,7 +96,7 @@ class RoomManagerService private constructor() {
         val roundStarted = ServerSocketMessage.RoundStarted(
             roundNumber = round.number,
             timeRemaining = room.game.getRoundTime(),
-            currentQuestion = room.game.currentQuestion!!.toDTO()
+            currentQuestion = room.game.getLastRound().question.toDTO()
         )
         broadcastToRoom(room, roundStarted)
         round.timer = CoroutineScope(Dispatchers.Default).launch {
@@ -111,7 +110,7 @@ class RoomManagerService private constructor() {
                 // Süre doldu
                 round.answer = null
                 // Süre doldu mesajı
-                val timeUpMessage = ServerSocketMessage.TimeUp(correctAnswer = room.game.currentQuestion?.answer!!)
+                val timeUpMessage = ServerSocketMessage.TimeUp(correctAnswer = room.game.getLastRound().question.answer)
                 broadcastToRoom(room, timeUpMessage)
                 endRound(roomId)
             } catch (e: CancellationException) {
@@ -134,7 +133,7 @@ class RoomManagerService private constructor() {
 
         val roundEnded = ServerSocketMessage.RoundEnded(
             cursorPosition = resistanceGame.cursorPosition,
-            correctAnswer = resistanceGame.currentQuestion!!.answer,
+            correctAnswer = resistanceGame.getLastRound().question.answer,
             winnerPlayerId = if (isCorrect) round.answeredPlayer?.id!! else null
         )
         broadcastToRoom(room, roundEnded)
@@ -152,7 +151,7 @@ class RoomManagerService private constructor() {
 
     suspend fun playerAnswered(roomId: String, playerId: String, answer: Int) {
         val room = roomService.getRoomById(roomId)
-        val question = room.game.currentQuestion ?: return
+        val question = room.game.getLastRound().question
         val player = room.players.find { it.id == playerId } ?: return
 
         //iki kullanici da bilemedi

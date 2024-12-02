@@ -10,8 +10,7 @@ import kotlinx.serialization.Serializable
 abstract class Game(
     val id: String,
     val categoryId: Int,
-    val rounds: MutableList<Round> = mutableListOf(),
-    var currentQuestion: Question? = null
+    val rounds: MutableList<Round> = mutableListOf()
 ) {
     abstract fun nextQuestion(): Question
 

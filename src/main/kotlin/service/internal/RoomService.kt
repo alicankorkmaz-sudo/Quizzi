@@ -105,7 +105,7 @@ class RoomService {
 
         val roundEndMessage = ServerSocketMessage.RoundEnded(
             cursorPosition = resistanceGame.cursorPosition,
-            correctAnswer = room.game.currentQuestion!!.answer,
+            correctAnswer = room.game.getLastRound().question.answer,
             winnerPlayerId = null
         )
         SessionManagerService.INSTANCE.broadcastToPlayers(playersInRoom, roundEndMessage)
