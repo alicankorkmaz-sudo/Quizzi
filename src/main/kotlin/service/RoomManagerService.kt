@@ -132,6 +132,7 @@ class RoomManagerService private constructor() {
                 )
                 broadcastToRoom(room, roundEnded)
 
+                delay(1000)
                 processRound(room)
             } catch (e: CancellationException) {
                 // Timer iptal edildi
