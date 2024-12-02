@@ -104,6 +104,7 @@ class RoomManagerService private constructor() {
             return
         }
 
+        delay(3000)
         val round = room.game.nextRound()
         val roundStarted = ServerSocketMessage.RoundStarted(
             roundNumber = round.number,
@@ -132,7 +133,6 @@ class RoomManagerService private constructor() {
                 )
                 broadcastToRoom(room, roundEnded)
 
-                delay(3000)
                 if (room.roomState == RoomState.PLAYING) {
                     processRound(room)
                 }
@@ -157,7 +157,6 @@ class RoomManagerService private constructor() {
         )
         broadcastToRoom(room, roundEnded)
 
-        delay(3000)
         if (room.roomState == RoomState.PLAYING) {
             processRound(room)
         }

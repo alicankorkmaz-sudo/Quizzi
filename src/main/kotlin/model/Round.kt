@@ -1,6 +1,7 @@
 package model
 
 import exception.AlreadyAnswered
+import exception.WrongCommandWrongTime
 import kotlinx.coroutines.Job
 import kotlinx.serialization.Serializable
 
@@ -15,6 +16,11 @@ data class Round(
     val playerAnswers: MutableList<PlayerAnswer> = mutableListOf()
 ) {
     fun playerAnswered(player: Player, answer: Int) {
+        // round bittiyse gec gelen cevabi handle etme
+        if (job?.isActive != true) {
+            throw WrongCommandWrongTime()
+        }
+
         //hali hazirda dogru yanit varsa ikinci yaniti handle etme
         if (playerAnswers.filter { playerAnswer -> playerAnswer.correct }.size == 1) {
             throw AlreadyAnswered()
