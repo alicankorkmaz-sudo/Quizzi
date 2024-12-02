@@ -18,8 +18,8 @@ class ResistanceGame(
         private const val MAX_PLAYERS = 2
     }
 
-    override fun nextQuestion(): Question {
-        return QuestionDatabase.getRandomQuestion(categoryId)
+    override fun gameOver(): Boolean {
+        return cursorPosition <= 0f || cursorPosition >= 1f
     }
 
     override fun calculateResult(players: MutableList<PlayerDTO>) {
@@ -39,12 +39,12 @@ class ResistanceGame(
         }
     }
 
-    override fun getRoundTime(): Long {
-        return ROUND_TIME_SECONDS
-    }
-
     override fun maxPlayerCount(): Int {
         return MAX_PLAYERS
+    }
+
+    override fun getRoundTime(): Long {
+        return ROUND_TIME_SECONDS
     }
 
     override fun nextRound(): Round {
@@ -56,5 +56,9 @@ class ResistanceGame(
 
     override fun getLastRound(): Round {
         return rounds.last()
+    }
+
+    private fun nextQuestion(): Question {
+        return QuestionDatabase.getRandomQuestion(categoryId)
     }
 }

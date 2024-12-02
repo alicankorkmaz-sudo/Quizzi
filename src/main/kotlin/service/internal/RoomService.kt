@@ -4,7 +4,7 @@ import dto.PlayerDTO
 import enums.PlayerState
 import enums.RoomState
 import exception.RoomNotFound
-import exception.SameCommandResented
+import exception.WrongCommandWrongTime
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -49,7 +49,7 @@ class RoomService {
     fun joinRoom(player: Player, roomId: String): Boolean {
         val room = rooms[roomId] ?: throw RoomNotFound(roomId)
         if (room.players.size >= room.game.maxPlayerCount()) return false
-        if (room.roomState != RoomState.WAITING) throw SameCommandResented()
+        if (room.roomState != RoomState.WAITING) throw WrongCommandWrongTime()
         room.players.add(player.toDTO())
         playerToRoom[player.id] = roomId
         return true
@@ -58,7 +58,7 @@ class RoomService {
     fun rejoinRoom(player: Player, roomId: String): Boolean {
         val room = rooms[roomId] ?: throw RoomNotFound(roomId)
         disconnectedPlayers[player.id] ?: return false
-        if (room.roomState != RoomState.PAUSED) throw SameCommandResented()
+        if (room.roomState != RoomState.PAUSED) throw WrongCommandWrongTime()
         room.players.add(player.toDTO())
         playerToRoom[player.id] = roomId
         playerReady(player.id)
@@ -69,7 +69,7 @@ class RoomService {
         room.players.forEach { player -> SessionManagerService.INSTANCE.removePlayerSession(player.id) }
         // Oda verilerini temizle
         if (room.game.rounds.size > 0) {
-            room.game.rounds.last().job?.cancel()
+            room.game.rounds.filter { r -> r.job?.isActive == true }.forEach { r -> r.job?.cancel() }
         }
         rooms.remove(room.id)
     }
@@ -78,7 +78,7 @@ class RoomService {
         val roomId = getRoomIdFromPlayerId(playerId)
         val room = getRoomById(roomId)
         if (room.roomState != RoomState.WAITING && room.roomState != RoomState.PAUSED) {
-            throw SameCommandResented()
+            throw WrongCommandWrongTime()
         }
         room.players
             .filter { player -> player.id == playerId }
@@ -94,12 +94,13 @@ class RoomService {
         val roomId = getRoomIdFromPlayerId(disconnectedPlayerId)
         val room = getRoomById(roomId)
         val disconnectedPlayer = PlayerManagerService.INSTANCE.getPlayer(disconnectedPlayerId)
+        room.roomState = RoomState.PAUSED
         disconnectedPlayers[disconnectedPlayerId] = DisconnectedPlayer(
             playerId = disconnectedPlayerId,
             playerName = disconnectedPlayer.name,
             roomId = roomId
         )
-        room.players.remove(disconnectedPlayer.toDTO())
+        room.removePlayer(disconnectedPlayer.id)
         playerToRoom.remove(disconnectedPlayerId)
 
         if (room.players.size == 0) {
@@ -123,8 +124,7 @@ class RoomService {
         )
         SessionManagerService.INSTANCE.broadcastToPlayers(playersInRoom, disconnectMessage)
 
-        room.roomState = RoomState.PAUSED
-        room.game.rounds.last().job?.cancel()
+        room.game.rounds.filter { r -> r.job?.isActive == true }.forEach { r -> r.job?.cancel() }
         room.game.rounds.removeAt(room.game.rounds.size - 1)
 
         CoroutineScope(Dispatchers.Default).launch {

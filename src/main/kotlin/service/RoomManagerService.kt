@@ -3,6 +3,7 @@ package service
 import dto.GameRoomDTO
 import dto.PlayerDTO
 import enums.RoomState
+import exception.WrongCommandWrongTime
 import kotlinx.coroutines.*
 import model.GameRoom
 import model.Player
@@ -93,8 +94,7 @@ class RoomManagerService private constructor() {
 
     private suspend fun processRound(room: GameRoom) {
         //gameOverChecking
-        val resistanceGame = room.game as ResistanceGame
-        if (resistanceGame.cursorPosition <= 0f || resistanceGame.cursorPosition >= 1f) {
+        if (room.game.gameOver()) {
             room.roomState = RoomState.CLOSED
             broadcastRoomState(room.id)
             val gameOverMessage =
@@ -104,6 +104,7 @@ class RoomManagerService private constructor() {
             return
         }
 
+        delay(3000)
         val round = room.game.nextRound()
         val roundStarted = ServerSocketMessage.RoundStarted(
             roundNumber = round.number,
@@ -123,6 +124,8 @@ class RoomManagerService private constructor() {
                 val timeUpMessage = ServerSocketMessage.TimeUp(correctAnswer = room.game.getLastRound().question.answer)
                 broadcastToRoom(room, timeUpMessage)
 
+                val resistanceGame = room.game as ResistanceGame
+
                 val roundEnded = ServerSocketMessage.RoundEnded(
                     cursorPosition = resistanceGame.cursorPosition,
                     correctAnswer = resistanceGame.getLastRound().question.answer,
@@ -130,8 +133,9 @@ class RoomManagerService private constructor() {
                 )
                 broadcastToRoom(room, roundEnded)
 
-                delay(1000)
-                processRound(room)
+                if (room.roomState == RoomState.PLAYING) {
+                    processRound(room)
+                }
             } catch (e: CancellationException) {
                 // Timer iptal edildi
             }
@@ -153,12 +157,14 @@ class RoomManagerService private constructor() {
         )
         broadcastToRoom(room, roundEnded)
 
-        delay(1000)
-        processRound(room)
+        if (room.roomState == RoomState.PLAYING) {
+            processRound(room)
+        }
     }
 
     suspend fun playerAnswered(roomId: String, playerId: String, answer: Int) {
         val room = roomService.getRoomById(roomId)
+        if (room.roomState != RoomState.PLAYING) throw WrongCommandWrongTime()
         val lastRound = room.game.getLastRound()
         val player = room.players.find { it.id == playerId } ?: return
 
