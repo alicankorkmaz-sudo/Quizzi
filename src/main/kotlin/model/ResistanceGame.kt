@@ -10,9 +10,8 @@ class ResistanceGame(
     id: String,
     categoryId: Int,
     rounds: MutableList<Round> = mutableListOf(),
-    currentQuestion: Question? = null,
     var cursorPosition: Float = 0.5f
-) : Game(id, categoryId, rounds, currentQuestion) {
+) : Game(id, categoryId, rounds) {
 
     companion object {
         private const val ROUND_TIME_SECONDS = 10L
@@ -20,12 +19,11 @@ class ResistanceGame(
     }
 
     override fun nextQuestion(): Question {
-        currentQuestion = QuestionDatabase.getRandomQuestion(categoryId)
-        return currentQuestion!!
+        return QuestionDatabase.getRandomQuestion(categoryId)
     }
 
     override fun processAnswer(players: MutableList<PlayerDTO>, answeredPlayerId: String?, answer: Int?): Boolean {
-        val isCorrect = answer == currentQuestion?.answer
+        val isCorrect = answer == getLastRound().question.answer
 
         if (isCorrect) {
             val correctPlayer = players.find { p ->
@@ -56,9 +54,8 @@ class ResistanceGame(
 
     override fun nextRound(): Round {
         val roundNumber = rounds.size + 1
-        val round = Round(roundNumber)
+        val round = Round(roundNumber, nextQuestion())
         rounds.add(round)
-        nextQuestion()
         return round
     }
 

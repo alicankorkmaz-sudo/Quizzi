@@ -66,7 +66,7 @@ class RoomService {
         room.players.forEach { player -> SessionManagerService.INSTANCE.removePlayerSession(player.id) }
         // Oda verilerini temizle
         if (room.game.rounds.size > 0) {
-            room.game.rounds.last().timer?.cancel()
+            room.game.rounds.last().job?.cancel()
         }
         rooms.remove(room.id)
     }
@@ -105,7 +105,7 @@ class RoomService {
 
         val roundEndMessage = ServerSocketMessage.RoundEnded(
             cursorPosition = resistanceGame.cursorPosition,
-            correctAnswer = room.game.currentQuestion!!.answer,
+            correctAnswer = room.game.getLastRound().question.answer,
             winnerPlayerId = null
         )
         SessionManagerService.INSTANCE.broadcastToPlayers(playersInRoom, roundEndMessage)
@@ -117,7 +117,7 @@ class RoomService {
         SessionManagerService.INSTANCE.broadcastToPlayers(playersInRoom, disconnectMessage)
 
         room.roomState = RoomState.PAUSED
-        room.game.rounds.last().timer?.cancel()
+        room.game.rounds.last().job?.cancel()
         room.game.rounds.removeAt(room.game.rounds.size - 1)
 
         CoroutineScope(Dispatchers.Default).launch {
