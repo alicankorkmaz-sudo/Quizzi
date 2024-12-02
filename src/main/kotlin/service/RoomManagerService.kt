@@ -112,7 +112,6 @@ class RoomManagerService private constructor() {
         broadcastToRoom(room, roundStarted)
         round.job = CoroutineScope(Dispatchers.Default).launch {
             try {
-
                 for (timeLeft in room.game.getRoundTime() - 1 downTo 1) {
                     delay(1000)
                     val timeUpdate = ServerSocketMessage.TimeUpdate(remaining = timeLeft)
@@ -158,6 +157,7 @@ class RoomManagerService private constructor() {
         )
         broadcastToRoom(room, roundEnded)
 
+        delay(1000)
         processRound(room)
     }
 
