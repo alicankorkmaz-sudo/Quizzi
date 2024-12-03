@@ -38,7 +38,7 @@ data class Round(
 
     fun isRoundOver(playerCount: Int): Boolean {
         //bir adet dogru yanit var
-        if (playerAnswers.filter { playerAnswer -> playerAnswer.correct }.size == 1) {
+        if (playerAnswers.any { playerAnswer -> playerAnswer.correct }) {
             return true
         }
 
