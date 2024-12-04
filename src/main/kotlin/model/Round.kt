@@ -4,6 +4,8 @@ import exception.AlreadyAnswered
 import exception.WrongCommandWrongTime
 import kotlinx.coroutines.Job
 import kotlinx.serialization.Serializable
+import java.util.*
+import kotlin.NoSuchElementException
 
 /**
  * @author guvencenanguvenal
@@ -13,7 +15,7 @@ data class Round(
     val number: Int,
     val question: Question,
     var job: Job? = null,
-    val playerAnswers: MutableList<PlayerAnswer> = mutableListOf()
+    val playerAnswers: MutableList<PlayerAnswer> = Collections.synchronizedList(mutableListOf())
 ) {
     fun playerAnswered(player: Player, answer: Int) {
         // round bittiyse gec gelen cevabi handle etme

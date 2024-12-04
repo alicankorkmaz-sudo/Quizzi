@@ -2,6 +2,7 @@ package model
 
 import dto.PlayerDTO
 import kotlinx.serialization.Serializable
+import java.util.*
 
 /**
  * @author guvencenanguvenal
@@ -10,7 +11,7 @@ import kotlinx.serialization.Serializable
 abstract class Game(
     val id: String,
     val categoryId: Int,
-    val rounds: MutableList<Round> = mutableListOf()
+    val rounds: MutableList<Round> = Collections.synchronizedList(mutableListOf())
 ) {
     abstract fun gameOver(): Boolean
 
