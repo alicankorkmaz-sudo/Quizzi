@@ -93,10 +93,6 @@ class RoomManagerService private constructor() {
     }
 
     private suspend fun processRound(room: GameRoom) {
-        //active round check
-        if (room.game.rounds.any { r -> r.job?.isActive == true }) {
-            return
-        }
 
         //gameOverChecking
         if (room.game.gameOver()) {
@@ -110,6 +106,12 @@ class RoomManagerService private constructor() {
         }
 
         delay(2000)
+
+        //active round check
+        if (room.game.rounds.any { r -> r.job?.isActive == true }) {
+            return
+        }
+
         val round = room.game.nextRound()
         val roundStarted = ServerSocketMessage.RoundStarted(
             roundNumber = round.number,
