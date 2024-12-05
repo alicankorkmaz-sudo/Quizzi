@@ -93,11 +93,6 @@ class RoomManagerService private constructor() {
     }
 
     private suspend fun processRound(room: GameRoom) {
-        //active round check
-        if (room.game.rounds.any { r -> r.job?.isActive == true }) {
-            return
-        }
-
         //gameOverChecking
         if (room.game.gameOver()) {
             room.roomState = RoomState.CLOSED
@@ -162,7 +157,7 @@ class RoomManagerService private constructor() {
         )
         broadcastToRoom(room, roundEnded)
 
-        if (room.roomState == RoomState.PLAYING) {
+        if (room.roomState == RoomState.PLAYING && room.game.rounds.none { r -> r.job?.isActive == true }) {
             processRound(room)
         }
     }
