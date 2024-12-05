@@ -59,6 +59,12 @@ class ResistanceGame(
     }
 
     private fun nextQuestion(): Question {
-        return QuestionDatabase.getRandomQuestion(categoryId)
+        var randomQuestion = QuestionDatabase.getRandomQuestion(categoryId)
+
+        while (rounds.any{ r -> r.question == randomQuestion }) {
+            randomQuestion = QuestionDatabase.getRandomQuestion(categoryId)
+        }
+
+        return randomQuestion
     }
 }
