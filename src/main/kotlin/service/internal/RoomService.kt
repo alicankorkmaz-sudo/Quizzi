@@ -3,6 +3,7 @@ package service.internal
 import dto.PlayerDTO
 import enums.PlayerState
 import enums.RoomState
+import exception.BusinessError
 import exception.RoomNotFound
 import exception.WrongCommandWrongTime
 import kotlinx.coroutines.CoroutineScope
@@ -39,7 +40,7 @@ class RoomService {
     fun createRoom(roomName: String, creator: Player, game: Game): String {
         val roomId = UUID.randomUUID().toString()
         val room = GameRoom(roomId, roomName, game)
-        room.players.add(creator.toDTO())
+        room.addPlayer(creator)
         rooms[roomId] = room
         playerToRoom[creator.id] = roomId
         println("Room $roomId created by player ${creator.id}")
@@ -48,9 +49,12 @@ class RoomService {
 
     fun joinRoom(player: Player, roomId: String): Boolean {
         val room = rooms[roomId] ?: throw RoomNotFound(roomId)
-        if (room.players.size >= room.game.maxPlayerCount()) return false
-        if (room.roomState != RoomState.WAITING) throw WrongCommandWrongTime()
-        room.players.add(player.toDTO())
+        try {
+            room.addPlayer(player)
+        }catch (e : BusinessError) {
+            print(e.message)
+            return false
+        }
         playerToRoom[player.id] = roomId
         return true
     }
@@ -58,8 +62,7 @@ class RoomService {
     fun rejoinRoom(player: Player, roomId: String): Boolean {
         val room = rooms[roomId] ?: throw RoomNotFound(roomId)
         disconnectedPlayers[player.id] ?: return false
-        if (room.roomState != RoomState.PAUSED) throw WrongCommandWrongTime()
-        room.players.add(player.toDTO())
+        room.addPlayer(player)
         playerToRoom[player.id] = roomId
         playerReady(player.id)
         return true

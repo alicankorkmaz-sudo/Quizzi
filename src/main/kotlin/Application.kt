@@ -1,4 +1,3 @@
-import exception.BusinessError
 import exception.SocketCloseError
 import handler.MessageHandler
 import io.ktor.serialization.kotlinx.json.*
@@ -67,9 +66,7 @@ fun Application.module() {
                             MessageHandler.INSTANCE.handleMessage(playerId, text)
                         }
 
-                        is Frame.Close -> {
-                            MessageHandler.INSTANCE.handleDisconnect(playerId)
-                        }
+                        is Frame.Close -> {}
 
                         else -> {}
                     }

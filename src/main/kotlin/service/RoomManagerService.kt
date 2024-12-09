@@ -1,7 +1,6 @@
 package service
 
 import dto.GameRoomDTO
-import dto.PlayerDTO
 import enums.RoomState
 import exception.WrongCommandWrongTime
 import kotlinx.coroutines.*
@@ -68,7 +67,7 @@ class RoomManagerService private constructor() {
     fun startGame(roomId: String) {
         val room = roomService.getRoomById(roomId)
         println("Starting game for room $roomId with ${room.players.size} players")
-        if (room.players.size != room.game.maxPlayerCount()) return
+        if (!room.isAllPlayerReady()) return
 
         gameScope.launch {
             countdownBeforeStart(room)
@@ -87,7 +86,7 @@ class RoomManagerService private constructor() {
         for (timeLeft in COUNTDOWN_TIME downTo 1) {
             delay(1000)
             val countdownTimeUpdate = ServerSocketMessage.CountdownTimeUpdate(remaining = timeLeft)
-            broadcastToRoom(room, countdownTimeUpdate)
+            room.broadcast(countdownTimeUpdate)
         }
         delay(1000)
     }
@@ -99,7 +98,7 @@ class RoomManagerService private constructor() {
             broadcastRoomState(room.id)
             val gameOverMessage =
                 ServerSocketMessage.GameOver(winnerPlayerId = room.game.getLastRound().roundWinnerPlayer()?.id!!)
-            broadcastToRoom(room, gameOverMessage)
+            room.broadcast(gameOverMessage)
             roomService.cleanupRoom(room)
             return
         }
@@ -111,18 +110,18 @@ class RoomManagerService private constructor() {
             timeRemaining = room.game.getRoundTime(),
             currentQuestion = room.game.getLastRound().question.toDTO()
         )
-        broadcastToRoom(room, roundStarted)
+        room.broadcast(roundStarted)
         round.job = CoroutineScope(Dispatchers.Default).launch {
             try {
                 for (timeLeft in room.game.getRoundTime() - 1 downTo 1) {
                     delay(1000)
                     val timeUpdate = ServerSocketMessage.TimeUpdate(remaining = timeLeft)
-                    broadcastToRoom(room, timeUpdate)
+                    room.broadcast(timeUpdate)
                 }
                 delay(1000)
                 // Süre doldu mesajı
                 val timeUpMessage = ServerSocketMessage.TimeUp(correctAnswer = room.game.getLastRound().question.answer)
-                broadcastToRoom(room, timeUpMessage)
+                room.broadcast(timeUpMessage)
 
                 val resistanceGame = room.game as ResistanceGame
 
@@ -131,7 +130,7 @@ class RoomManagerService private constructor() {
                     correctAnswer = resistanceGame.getLastRound().question.answer,
                     winnerPlayerId = null
                 )
-                broadcastToRoom(room, roundEnded)
+                room.broadcast(roundEnded)
 
                 if (room.roomState == RoomState.PLAYING) {
                     processRound(room)
@@ -155,7 +154,7 @@ class RoomManagerService private constructor() {
             correctAnswer = resistanceGame.getLastRound().question.answer,
             winnerPlayerId = round.roundWinnerPlayer()?.id
         )
-        broadcastToRoom(room, roundEnded)
+        room.broadcast(roundEnded)
 
         if (room.roomState == RoomState.PLAYING && room.game.rounds.none { r -> r.job?.isActive == true }) {
             processRound(room)
@@ -176,7 +175,7 @@ class RoomManagerService private constructor() {
             answer = answer,
             correct = lastRound.question.answer == answer
         )
-        broadcastToRoom(room, answerResult)
+        room.broadcast(answerResult)
 
         if (roundOver) {
             interruptRound(room)
@@ -207,12 +206,6 @@ class RoomManagerService private constructor() {
             players = room.players,
             state = room.roomState,
         )
-        broadcastToRoom(room, gameUpdate)
-    }
-
-    private suspend fun broadcastToRoom(room: GameRoom, message: ServerSocketMessage) {
-        println("Broadcasting message to room ${room.id}: $message")
-        val playerIds = room.players.map(PlayerDTO::id).toMutableList()
-        SessionManagerService.INSTANCE.broadcastToPlayers(playerIds, message)
+        room.broadcast(gameUpdate)
     }
 }
