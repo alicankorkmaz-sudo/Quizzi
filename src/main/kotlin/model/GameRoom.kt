@@ -3,6 +3,8 @@ package model
 import dto.PlayerDTO
 import enums.PlayerState
 import enums.RoomState
+import exception.TooMuchPlayersInRoom
+import exception.WrongCommandWrongTime
 import kotlinx.serialization.Serializable
 import response.ServerSocketMessage
 import service.SessionManagerService
@@ -16,6 +18,12 @@ data class GameRoom(
     val players: MutableList<PlayerDTO> = Collections.synchronizedList(mutableListOf()),
     var roomState: RoomState = RoomState.WAITING,
 ) {
+    fun addPlayer(player: Player) {
+        if (players.size >= game.maxPlayerCount()) throw TooMuchPlayersInRoom()
+        if (roomState != RoomState.WAITING) throw WrongCommandWrongTime()
+        players.add(player.toDTO())
+    }
+
     fun removePlayer(playerId: String) {
         players.removeIf { p -> p.id == playerId }
     }
