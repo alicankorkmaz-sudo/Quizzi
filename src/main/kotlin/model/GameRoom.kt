@@ -38,4 +38,14 @@ data class GameRoom(
         val playerIds = players.map(PlayerDTO::id).toMutableList()
         SessionManagerService.INSTANCE.broadcastToPlayers(playerIds, message)
     }
+
+    suspend fun broadcastRoomState() {
+        println("Broadcasting game state for room $id")
+
+        val gameUpdate = ServerSocketMessage.RoomUpdate(
+            players = players,
+            state = roomState,
+        )
+        broadcast(gameUpdate)
+    }
 }

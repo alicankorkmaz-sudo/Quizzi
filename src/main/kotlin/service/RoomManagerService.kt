@@ -67,7 +67,7 @@ class RoomManagerService private constructor() {
     fun startGame(roomId: String) {
         val room = roomService.getRoomById(roomId)
         println("Starting game for room $roomId with ${room.players.size} players")
-        if (room.players.size != room.game.maxPlayerCount()) return
+        if (!room.isAllPlayerReady()) return
 
         gameScope.launch {
             countdownBeforeStart(room)
