@@ -20,7 +20,7 @@ data class GameRoom(
 ) {
     fun addPlayer(player: Player) {
         if (players.size >= game.maxPlayerCount()) throw TooMuchPlayersInRoom()
-        if (roomState != RoomState.WAITING) throw WrongCommandWrongTime()
+        if (roomState != RoomState.WAITING && roomState != RoomState.PAUSED) throw WrongCommandWrongTime()
         players.add(player.toDTO())
     }
 
