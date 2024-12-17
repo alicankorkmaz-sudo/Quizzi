@@ -1,11 +1,11 @@
 package model
 
+import enums.RoundState
 import exception.AlreadyAnswered
 import exception.WrongCommandWrongTime
 import kotlinx.coroutines.Job
 import kotlinx.serialization.Serializable
 import java.util.*
-import kotlin.NoSuchElementException
 
 /**
  * @author guvencenanguvenal
@@ -17,12 +17,36 @@ data class Round(
     var job: Job? = null,
     val playerAnswers: MutableList<PlayerAnswer> = Collections.synchronizedList(mutableListOf())
 ) {
-    fun playerAnswered(player: Player, answer: Int) {
-        // round bittiyse gec gelen cevabi handle etme
-        if (job?.isActive != true) {
-            throw WrongCommandWrongTime()
-        }
+    private var state: RoundState = RoundState.Idle
 
+    fun transitionTo(newState: RoundState) {
+        when(state) {
+            is RoundState.Interrupt -> {
+                if (newState is RoundState.Start) {
+                    throw IllegalStateException("Invalid transition from Start to $newState")
+                }
+            }
+            else -> {}
+        }
+        state = newState
+        onChanged(newState)
+    }
+
+    private fun onChanged(newState: RoundState) {
+        when(newState) {
+            RoundState.Start -> {
+                job.start()
+            }
+            is RoundState.Interrupt -> {
+                playerAnswered(newState.player, newState.answer)
+                job.cancel()
+            }
+            RoundState.End -> return
+            RoundState.Idle -> return
+        }
+    }
+
+    fun playerAnswered(player: Player, answer: Int) {
         //hali hazirda dogru yanit varsa ikinci yaniti handle etme
         if (playerAnswers.filter { playerAnswer -> playerAnswer.correct }.size == 1) {
             throw AlreadyAnswered()

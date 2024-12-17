@@ -1,6 +1,7 @@
 package model
 
 import dto.PlayerDTO
+import kotlinx.coroutines.Job
 import kotlinx.serialization.Serializable
 import java.util.*
 
