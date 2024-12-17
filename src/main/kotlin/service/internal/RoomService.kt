@@ -99,7 +99,19 @@ class RoomService {
             val room = getRoomById(roomId)
 
             val disconnectedPlayer = PlayerManagerService.INSTANCE.getPlayer(disconnectedPlayerId)
+
+            val resistanceGame = room.game as ResistanceGame
+
+            val roundEndMessage = ServerSocketMessage.RoundEnded(
+                cursorPosition = resistanceGame.cursorPosition,
+                correctAnswer = room.game.getLastRound().question.answer,
+                winnerPlayerId = null
+            )
+            room.broadcast(roundEndMessage)
+
             room.roomState = RoomState.PAUSED
+            room.broadcastRoomState()
+
             disconnectedPlayers[disconnectedPlayerId] = DisconnectedPlayer(
                 playerId = disconnectedPlayerId,
                 playerName = disconnectedPlayer.name,
@@ -112,15 +124,6 @@ class RoomService {
                 cleanupRoom(room)
                 return
             }
-
-            val resistanceGame = room.game as ResistanceGame
-
-            val roundEndMessage = ServerSocketMessage.RoundEnded(
-                cursorPosition = resistanceGame.cursorPosition,
-                correctAnswer = room.game.getLastRound().question.answer,
-                winnerPlayerId = null
-            )
-            room.broadcast(roundEndMessage)
 
             val disconnectMessage = ServerSocketMessage.PlayerDisconnected(
                 playerId = disconnectedPlayer.id,
