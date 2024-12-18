@@ -1,8 +1,7 @@
 package service.internal
 
-import dto.PlayerDTO
 import enums.PlayerState
-import enums.RoomState
+import enums.RoomEnumState
 import exception.BusinessError
 import exception.RoomNotFound
 import exception.WrongCommandWrongTime
@@ -80,7 +79,7 @@ class RoomService {
     fun playerReady(playerId: String) {
         val roomId = getRoomIdFromPlayerId(playerId)
         val room = getRoomById(roomId)
-        if (room.roomState != RoomState.WAITING && room.roomState != RoomState.PAUSED) {
+        if (room.roomEnumState != RoomEnumState.WAITING && room.roomEnumState != RoomEnumState.PAUSED) {
             throw WrongCommandWrongTime()
         }
         room.players
@@ -109,7 +108,7 @@ class RoomService {
             )
             room.broadcast(roundEndMessage)
 
-            room.roomState = RoomState.PAUSED
+            room.roomEnumState = RoomEnumState.PAUSED
             room.broadcastRoomState()
 
             disconnectedPlayers[disconnectedPlayerId] = DisconnectedPlayer(
@@ -136,7 +135,7 @@ class RoomService {
 
             CoroutineScope(Dispatchers.Default).launch {
                 delay(30000)
-                if (room.roomState == RoomState.PAUSED) {
+                if (room.roomEnumState == RoomEnumState.PAUSED) {
                     disconnectedPlayers.remove(disconnectedPlayerId)
                     println("Player $disconnectedPlayerId did not reconnect within 30 seconds, cleaning up room $roomId")
                     room.broadcast(ServerSocketMessage.RoomClosed(reason = "Player disconnected for too long"))

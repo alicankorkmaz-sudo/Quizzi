@@ -1,7 +1,7 @@
 package service
 
 import dto.GameRoomDTO
-import enums.RoomState
+import enums.RoomEnumState
 import exception.WrongCommandWrongTime
 import kotlinx.coroutines.*
 import model.GameRoom
@@ -21,8 +21,6 @@ class RoomManagerService private constructor() {
     }
 
     private val roomService: RoomService = RoomService()
-
-    private val gameScope = CoroutineScope(Dispatchers.Default + Job())
 
     fun getRoomIdFromPlayerId(playerId: String): String {
         return roomService.getRoomIdFromPlayerId(playerId)
@@ -68,33 +66,13 @@ class RoomManagerService private constructor() {
         val room = roomService.getRoomById(roomId)
         println("Starting game for room $roomId with ${room.players.size} players")
         if (!room.isAllPlayerReady()) return
-
-        gameScope.launch {
-            countdownBeforeStart(room)
-            println("Starting actual game for room ${room.id}")
-            room.roomState = RoomState.PLAYING
-            broadcastRoomState(room.id)
-            processRound(room)
-        }
-    }
-
-    private suspend fun countdownBeforeStart(room: GameRoom) {
-        println("Starting countdown for room ${room.id}")
-        room.roomState = RoomState.COUNTDOWN
-        broadcastRoomState(room.id)
-
-        for (timeLeft in COUNTDOWN_TIME downTo 1) {
-            delay(1000)
-            val countdownTimeUpdate = ServerSocketMessage.CountdownTimeUpdate(remaining = timeLeft)
-            room.broadcast(countdownTimeUpdate)
-        }
-        delay(1000)
+        room.startGame()
     }
 
     private suspend fun processRound(room: GameRoom) {
         //gameOverChecking
         if (room.game.gameOver()) {
-            room.roomState = RoomState.CLOSED
+            room.roomEnumState = RoomEnumState.CLOSED
             broadcastRoomState(room.id)
             val gameOverMessage =
                 ServerSocketMessage.GameOver(winnerPlayerId = room.game.getLastRound().roundWinnerPlayer()?.id!!)
@@ -132,7 +110,7 @@ class RoomManagerService private constructor() {
                 )
                 room.broadcast(roundEnded)
 
-                if (room.roomState == RoomState.PLAYING) {
+                if (room.roomEnumState == RoomEnumState.PLAYING) {
                     processRound(room)
                 }
             } catch (e: CancellationException) {
@@ -156,14 +134,14 @@ class RoomManagerService private constructor() {
         )
         room.broadcast(roundEnded)
 
-        if (room.roomState == RoomState.PLAYING && room.game.rounds.none { r -> r.job?.isActive == true }) {
+        if (room.roomEnumState == RoomEnumState.PLAYING && room.game.rounds.none { r -> r.job?.isActive == true }) {
             processRound(room)
         }
     }
 
     suspend fun playerAnswered(roomId: String, playerId: String, answer: Int) {
         val room = roomService.getRoomById(roomId)
-        if (room.roomState != RoomState.PLAYING) throw WrongCommandWrongTime()
+        if (room.roomEnumState != RoomEnumState.PLAYING) throw WrongCommandWrongTime()
         val lastRound = room.game.getLastRound()
         val player = room.players.find { it.id == playerId } ?: return
 
@@ -192,7 +170,7 @@ class RoomManagerService private constructor() {
                 id = id,
                 name = room.name,
                 playerCount = room.players.size,
-                roomState = room.roomState,
+                roomEnumState = room.roomEnumState,
                 players = room.players.map { it.name }
             )
         }
@@ -204,7 +182,7 @@ class RoomManagerService private constructor() {
 
         val gameUpdate = ServerSocketMessage.RoomUpdate(
             players = room.players,
-            state = room.roomState,
+            state = room.roomEnumState,
         )
         room.broadcast(gameUpdate)
     }
