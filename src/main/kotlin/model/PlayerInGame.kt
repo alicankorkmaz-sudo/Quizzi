@@ -1,18 +1,16 @@
-package dto
+package model
 
-import state.PlayerState
+import dto.PlayerDTO
 import kotlinx.serialization.Serializable
-import model.Player
-import model.PlayerInRoom
+import state.PlayerState
 
 /**
  * @author guvencenanguvenal
  */
 @Serializable
-data class PlayerDTO(val id: String, val name: String, val avatarUrl: String, var state: PlayerState) {
-    constructor(player: Player) : this(player.id, player.name, player.avatarUrl, PlayerState.WAIT)
+class PlayerInGame(val id: String, val name: String, val avatarUrl: String, val index: Int) {
 
-    constructor(player: PlayerInRoom) : this(player.id, player.name, player.avatarUrl, player.state)
+    constructor(player: Player, index: Int) : this(player.id, player.name, player.avatarUrl, index)
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true

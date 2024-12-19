@@ -43,13 +43,13 @@ data class Round(
             RoundState.Start -> {}
             RoundState.Interrupt -> {
                 if (event is RoundEvent.Answered) {
-                    throw IllegalStateException("Invalid event to $state")
+                    throw WrongCommandWrongTime()
                 }
             }
 
             RoundState.End -> {
                 if (event is RoundEvent.Answered) {
-                    throw IllegalStateException("Invalid event to $state")
+                    throw WrongCommandWrongTime()
                 }
             }
         }

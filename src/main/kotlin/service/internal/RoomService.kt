@@ -1,14 +1,10 @@
 package service.internal
 
-import enums.RoomEnumState
-import exception.BusinessError
 import exception.RoomNotFound
-import exception.WrongCommandWrongTime
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import model.Game
 import model.GameRoom
 import model.Player
 import model.ResistanceGame
@@ -17,7 +13,6 @@ import response.ServerSocketMessage
 import service.GameFactory
 import service.PlayerManagerService
 import service.SessionManagerService
-import state.PlayerState
 import java.util.*
 
 /**
@@ -39,7 +34,7 @@ class RoomService {
 
     fun getRoomIdByPlayerId(playerId: String) = playerToRoom[playerId] ?: throw RoomNotFound("from PlayerId")
 
-    fun createRoom(roomName: String, creator: Player, gameCategoryId: Int, gameType: String): String {
+    fun createRoom(roomName: String, creator: Player, gameCategoryId: Int, gameType: String): GameRoom {
         val roomId = UUID.randomUUID().toString()
         val game = GameFactory.INSTANCE.createGame(roomId, gameCategoryId, gameType, roomId)
         val room = GameRoom(roomId, roomName, game)
@@ -47,7 +42,7 @@ class RoomService {
         rooms[roomId] = room
         playerToRoom[creator.id] = roomId
         println("Room $roomId created by player ${creator.id}")
-        return roomId
+        return room
     }
 
     fun joinRoom(player: Player, roomId: String): Boolean {
@@ -55,38 +50,13 @@ class RoomService {
         return true
     }
 
-    fun rejoinRoom(player: Player, roomId: String): Boolean {
-        val room = rooms[roomId] ?: throw RoomNotFound(roomId)
-        disconnectedPlayers[player.id] ?: return false
-        room.addPlayer(player)
-        playerToRoom[player.id] = roomId
-        playerReady(player.id)
-        return true
-    }
-
     suspend fun cleanupRoom(room: GameRoom) {
-        room.players.forEach { player -> SessionManagerService.INSTANCE.removePlayerSession(player.id) }
+        room.getPlayers().forEach { player -> SessionManagerService.INSTANCE.removePlayerSession(player.id) }
         // Oda verilerini temizle
         if (room.game.rounds.size > 0) {
             room.game.rounds.filter { r -> r.job?.isActive == true }.forEach { r -> r.job?.cancel() }
         }
         rooms.remove(room.id)
-    }
-
-    fun playerReady(playerId: String) {
-        val roomId = getRoomIdByPlayerId(playerId)
-        val room = getRoomById(roomId)
-        if (room.roomEnumState != RoomEnumState.WAITING && room.roomEnumState != RoomEnumState.PAUSED) {
-            throw WrongCommandWrongTime()
-        }
-        room.players
-            .filter { player -> player.id == playerId }
-            .forEach { player -> player.state = PlayerState.READY }
-    }
-
-    fun isAllPlayerReady(roomId: String): Boolean {
-        val room = getRoomById(roomId)
-        return room.isAllPlayerReady()
     }
 
     suspend fun playerDisconnected(disconnectedPlayerId: String) {
@@ -105,7 +75,7 @@ class RoomService {
             )
             room.broadcast(roundEndMessage)
 
-            room.roomEnumState = RoomEnumState.PAUSED
+            //room.roomEnumState = RoomEnumState.PAUSED
             room.broadcastRoomState()
 
             disconnectedPlayers[disconnectedPlayerId] = DisconnectedPlayer(
@@ -116,7 +86,7 @@ class RoomService {
             room.removePlayer(disconnectedPlayer.id)
             playerToRoom.remove(disconnectedPlayerId)
 
-            if (room.players.size == 0) {
+            if (room.getPlayerCount() == 0) {
                 cleanupRoom(room)
                 return
             }
@@ -132,12 +102,12 @@ class RoomService {
 
             CoroutineScope(Dispatchers.Default).launch {
                 delay(30000)
-                if (room.roomEnumState == RoomEnumState.PAUSED) {
-                    disconnectedPlayers.remove(disconnectedPlayerId)
-                    println("Player $disconnectedPlayerId did not reconnect within 30 seconds, cleaning up room $roomId")
-                    room.broadcast(ServerSocketMessage.RoomClosed(reason = "Player disconnected for too long"))
-                    cleanupRoom(room)
-                }
+                // if (room.roomEnumState == RoomEnumState.PAUSED) {
+                disconnectedPlayers.remove(disconnectedPlayerId)
+                println("Player $disconnectedPlayerId did not reconnect within 30 seconds, cleaning up room $roomId")
+                room.broadcast(ServerSocketMessage.RoomClosed(reason = "Player disconnected for too long"))
+                cleanupRoom(room)
+                //}
             }
         } catch (e: RoomNotFound) {
             return

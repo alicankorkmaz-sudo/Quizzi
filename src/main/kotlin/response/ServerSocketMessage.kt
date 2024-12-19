@@ -5,7 +5,7 @@ import dto.QuestionDTO
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonClassDiscriminator
-import enums.RoomEnumState
+import state.RoomState
 
 /**
  * @author guvencenanguvenal
@@ -45,7 +45,7 @@ sealed class ServerSocketMessage {
     @SerialName("RoomUpdate")
     data class RoomUpdate(
         val players: List<PlayerDTO>,
-        val state: RoomEnumState,
+        val state: RoomState,
     ) : ServerSocketMessage()
 
     @Serializable

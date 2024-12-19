@@ -1,12 +1,9 @@
 package service
 
 import dto.GameRoomDTO
-import exception.RoomNotFound
 import model.GameRoom
 import model.Player
-import response.ServerSocketMessage
 import service.internal.RoomService
-import java.util.*
 
 /**
  * @author guvencenanguvenal
@@ -24,13 +21,11 @@ class RoomManagerService private constructor() {
 
     fun getRoomByPlayerId(playerId: String) = roomService.getRoomByPlayerId(playerId)
 
-    fun getRoomIdByPlayerId(playerId: String) = roomService.getRoomIdByPlayerId(playerId)
-
     suspend fun createRoom(name: String, playerId: String, gameType: String): String {
         val creatorPlayer = PlayerManagerService.INSTANCE.getPlayer(playerId)
-        val roomId = roomService.createRoom(name, creatorPlayer, GameFactory.CategoryType.FLAGS, gameType)
-        broadcastRoomState(roomId)
-        return roomId
+        val room = roomService.createRoom(name, creatorPlayer, GameFactory.CategoryType.FLAGS, gameType)
+        room.broadcastRoomState()
+        return room.id
     }
 
     fun joinRoom(player: Player, roomId: String): Boolean = roomService.joinRoom(player, roomId)
@@ -44,21 +39,10 @@ class RoomManagerService private constructor() {
             GameRoomDTO(
                 id = id,
                 name = room.name,
-                playerCount = room.players.size,
-                roomEnumState = room.roomEnumState,
-                players = room.players.map { it.name }
+                playerCount = room.getPlayerCount(),
+                roomState = room.getState(),
+                players = room.getPlayerNames()
             )
         }
-    }
-
-    private suspend fun broadcastRoomState(roomId: String) {
-        println("Broadcasting game state for room $roomId")
-        val room = roomService.getRoomById(roomId)
-
-        val gameUpdate = ServerSocketMessage.RoomUpdate(
-            players = room.players,
-            state = room.roomEnumState,
-        )
-        room.broadcast(gameUpdate)
     }
 }

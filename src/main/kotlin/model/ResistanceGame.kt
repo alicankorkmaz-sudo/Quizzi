@@ -3,7 +3,7 @@ package model
 import data.QuestionDatabase
 import domain.GameEvent
 import domain.RoundEvent
-import dto.PlayerDTO
+import exception.WrongCommandWrongTime
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -20,10 +20,11 @@ import kotlin.coroutines.cancellation.CancellationException
 class ResistanceGame(
     id: String,
     categoryId: Int,
-    private val roomId: String,
+    whichRoomInIt: String,
+    players: MutableList<PlayerInGame> = mutableListOf(),
     rounds: MutableList<Round> = mutableListOf(),
     var cursorPosition: Float = 0.5f
-) : Game(id, categoryId, rounds) {
+) : Game(id, whichRoomInIt, categoryId, players, rounds) {
 
     companion object {
         private const val ROUND_TIME_SECONDS = 10L
@@ -59,12 +60,12 @@ class ResistanceGame(
     override suspend fun handleEvent(event: GameEvent) {
         when (state) {
             GameState.Idle -> {
-                throw IllegalStateException("Invalid event to $state")
+                throw WrongCommandWrongTime()
             }
 
             GameState.Playing -> {}
             GameState.Over -> {
-                throw IllegalStateException("Invalid event to $state")
+                throw WrongCommandWrongTime()
             }
         }
         onProcessEvent(event)
@@ -97,18 +98,18 @@ class ResistanceGame(
                     timeRemaining = getRoundTime(),
                     currentQuestion = getLastRound().question.toDTO()
                 )
-                RoomBroadcastService.INSTANCE.broadcast(roomId, roundStarted)
+                RoomBroadcastService.INSTANCE.broadcast(whichRoomInIt, roundStarted)
                 round.job = CoroutineScope(Dispatchers.Default).launch {
                     try {
                         for (timeLeft in getRoundTime() - 1 downTo 1) {
                             delay(1000)
                             val timeUpdate = ServerSocketMessage.TimeUpdate(remaining = timeLeft)
-                            RoomBroadcastService.INSTANCE.broadcast(roomId, timeUpdate)
+                            RoomBroadcastService.INSTANCE.broadcast(whichRoomInIt, timeUpdate)
                         }
                         delay(1000)
                         // Süre doldu mesajı
                         val timeUpMessage = ServerSocketMessage.TimeUp(correctAnswer = getLastRound().question.answer)
-                        RoomBroadcastService.INSTANCE.broadcast(roomId, timeUpMessage)
+                        RoomBroadcastService.INSTANCE.broadcast(whichRoomInIt, timeUpMessage)
                     } catch (e: CancellationException) {
                         // Timer iptal edildi
                     }
@@ -129,16 +130,17 @@ class ResistanceGame(
                     answer = event.answer,
                     correct = lastRound.question.answer == event.answer
                 )
-                RoomBroadcastService.INSTANCE.broadcast(roomId, answerResult)
+                RoomBroadcastService.INSTANCE.broadcast(whichRoomInIt, answerResult)
             }
 
             GameEvent.RoundEnded -> {
+                calculateResult()
                 val roundEnded = ServerSocketMessage.RoundEnded(
                     cursorPosition = cursorPosition,
                     correctAnswer = getLastRound().question.answer,
                     winnerPlayerId = null
                 )
-                RoomBroadcastService.INSTANCE.broadcast(roomId, roundEnded)
+                RoomBroadcastService.INSTANCE.broadcast(whichRoomInIt, roundEnded)
                 getLastRound().transitionTo(RoundState.End)
                 handleEvent(GameEvent.RoundStarted)
             }
@@ -163,14 +165,15 @@ class ResistanceGame(
 
     /////////////////////////////
 
-    override fun calculateResult(players: MutableList<PlayerDTO>) {
+    override fun calculateResult() {
         val lastRound = getLastRound()
 
         val roundWinnerPlayer = lastRound.roundWinnerPlayer()
 
         if (roundWinnerPlayer != null) {
+            val roundWinnerIndex = players.find { p -> p.id == roundWinnerPlayer.id }!!.index
             val currentPosition = cursorPosition
-            val movement = if (players.indexOf(roundWinnerPlayer.toDTO()) == 0) -0.1f else 0.1f
+            val movement = if (roundWinnerIndex == 0) -0.1f else 0.1f
             val newPosition = currentPosition + movement
             cursorPosition = when {
                 newPosition <= 0.1f -> 0f  // Sol limit

@@ -1,13 +1,13 @@
 package dto
 
 import kotlinx.serialization.Serializable
-import enums.RoomEnumState
+import state.RoomState
 
 @Serializable
 data class GameRoomDTO(
     val id: String,
     val name: String,
     val playerCount: Int,
-    val roomEnumState: RoomEnumState,
+    val roomState: RoomState,
     val players: List<String>
 )
