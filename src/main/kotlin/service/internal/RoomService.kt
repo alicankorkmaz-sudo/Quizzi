@@ -1,8 +1,6 @@
 package service.internal
 
-import dto.PlayerDTO
-import enums.PlayerState
-import enums.RoomState
+import enums.RoomEnumState
 import exception.BusinessError
 import exception.RoomNotFound
 import exception.WrongCommandWrongTime
@@ -16,8 +14,10 @@ import model.Player
 import model.ResistanceGame
 import response.DisconnectedPlayer
 import response.ServerSocketMessage
+import service.GameFactory
 import service.PlayerManagerService
 import service.SessionManagerService
+import state.PlayerState
 import java.util.*
 
 /**
@@ -35,10 +35,13 @@ class RoomService {
 
     fun getRoomById(id: String) = rooms[id] ?: throw RoomNotFound(id)
 
-    fun getRoomIdFromPlayerId(playerId: String) = playerToRoom[playerId] ?: throw RoomNotFound("from PlayerId")
+    fun getRoomByPlayerId(playerId: String) = rooms[playerToRoom[playerId]] ?: throw RoomNotFound("from PlayerId")
 
-    fun createRoom(roomName: String, creator: Player, game: Game): String {
+    fun getRoomIdByPlayerId(playerId: String) = playerToRoom[playerId] ?: throw RoomNotFound("from PlayerId")
+
+    fun createRoom(roomName: String, creator: Player, gameCategoryId: Int, gameType: String): String {
         val roomId = UUID.randomUUID().toString()
+        val game = GameFactory.INSTANCE.createGame(roomId, gameCategoryId, gameType, roomId)
         val room = GameRoom(roomId, roomName, game)
         room.addPlayer(creator)
         rooms[roomId] = room
@@ -48,13 +51,6 @@ class RoomService {
     }
 
     fun joinRoom(player: Player, roomId: String): Boolean {
-        val room = rooms[roomId] ?: throw RoomNotFound(roomId)
-        try {
-            room.addPlayer(player)
-        } catch (e: BusinessError) {
-            print(e.message)
-            return false
-        }
         playerToRoom[player.id] = roomId
         return true
     }
@@ -78,9 +74,9 @@ class RoomService {
     }
 
     fun playerReady(playerId: String) {
-        val roomId = getRoomIdFromPlayerId(playerId)
+        val roomId = getRoomIdByPlayerId(playerId)
         val room = getRoomById(roomId)
-        if (room.roomState != RoomState.WAITING && room.roomState != RoomState.PAUSED) {
+        if (room.roomEnumState != RoomEnumState.WAITING && room.roomEnumState != RoomEnumState.PAUSED) {
             throw WrongCommandWrongTime()
         }
         room.players
@@ -95,7 +91,7 @@ class RoomService {
 
     suspend fun playerDisconnected(disconnectedPlayerId: String) {
         try {
-            val roomId = getRoomIdFromPlayerId(disconnectedPlayerId)
+            val roomId = getRoomIdByPlayerId(disconnectedPlayerId)
             val room = getRoomById(roomId)
 
             val disconnectedPlayer = PlayerManagerService.INSTANCE.getPlayer(disconnectedPlayerId)
@@ -109,7 +105,7 @@ class RoomService {
             )
             room.broadcast(roundEndMessage)
 
-            room.roomState = RoomState.PAUSED
+            room.roomEnumState = RoomEnumState.PAUSED
             room.broadcastRoomState()
 
             disconnectedPlayers[disconnectedPlayerId] = DisconnectedPlayer(
@@ -136,7 +132,7 @@ class RoomService {
 
             CoroutineScope(Dispatchers.Default).launch {
                 delay(30000)
-                if (room.roomState == RoomState.PAUSED) {
+                if (room.roomEnumState == RoomEnumState.PAUSED) {
                     disconnectedPlayers.remove(disconnectedPlayerId)
                     println("Player $disconnectedPlayerId did not reconnect within 30 seconds, cleaning up room $roomId")
                     room.broadcast(ServerSocketMessage.RoomClosed(reason = "Player disconnected for too long"))
