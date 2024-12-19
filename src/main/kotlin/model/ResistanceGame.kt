@@ -80,7 +80,7 @@ class ResistanceGame(
 
             GameState.Over -> {
                 rounds.forEach { round -> round.job?.cancel() }
-                broadcast(ServerSocketMessage.GameOver(winnerPlayerId = getLastRound().roundWinnerPlayer()?.id!!))
+                broadcast(ServerSocketMessage.GameOver(winnerPlayerId = getLastRound().roundWinnerPlayer()?.id))
             }
         }
     }
@@ -145,6 +145,11 @@ class ResistanceGame(
                 broadcast(roundEnded)
                 lastRound.transitionTo(RoundState.End)
                 handleEvent(GameEvent.RoundStarted)
+            }
+
+            is GameEvent.PlayerDisconnected -> {
+                getLastRound().transitionTo(RoundState.Interrupt)
+                //rounds.removeAt(rounds.size - 1) TODO gerek yok gibi
             }
         }
     }

@@ -1,5 +1,6 @@
 package model
 
+import domain.GameEvent
 import domain.RoomEvent
 import exception.TooMuchPlayersInRoom
 import exception.WrongCommandWrongTime
@@ -38,6 +39,11 @@ data class GameRoom(
                 }
             }
 
+            RoomState.Pausing -> {
+                if (newState !is RoomState.Countdown && newState !is RoomState.Closing) {
+                    throw IllegalStateException("Invalid transition from Playing to $newState")
+                }
+            }
             RoomState.Playing -> {
                 if (newState is RoomState.Countdown) {
                     throw IllegalStateException("Invalid transition from Playing to $newState")
@@ -49,6 +55,7 @@ data class GameRoom(
                     throw IllegalStateException("Invalid transition from Closed to $newState")
                 }
             }
+
         }
         state = newState
         onStateChanged(newState)
@@ -63,6 +70,7 @@ data class GameRoom(
                 }
             }
 
+            RoomState.Pausing -> {}
             RoomState.Playing -> {
                 if (event !is RoomEvent.Disconnected) {
                     throw WrongCommandWrongTime()
@@ -72,6 +80,7 @@ data class GameRoom(
             RoomState.Closing -> {
                 throw WrongCommandWrongTime()
             }
+
         }
         onProcessEvent(event)
     }
@@ -84,13 +93,16 @@ data class GameRoom(
                 transitionTo(RoomState.Playing)
             }
 
+            RoomState.Pausing -> {}
             RoomState.Playing -> {
                 gameScope.launch {
                     game.transitionTo(GameState.Playing)
                 }
             }
 
-            RoomState.Closing -> {}
+            RoomState.Closing -> {
+                game.transitionTo(GameState.Over)
+            }
         }
         broadcastRoomState()
     }
@@ -112,7 +124,17 @@ data class GameRoom(
 
             is RoomEvent.Disconnected -> {
                 removePlayer(event.playerId)
-                transitionTo(RoomState.Waiting)
+                game.handleEvent(GameEvent.PlayerDisconnected)
+
+                val disconnectMessage = ServerSocketMessage.PlayerDisconnected(
+                    playerId = event.playerId
+                )
+                broadcast(disconnectMessage)
+
+                if (players.isEmpty()) {
+                    transitionTo(RoomState.Closing)
+                }
+                transitionTo(RoomState.Pausing)
             }
         }
     }

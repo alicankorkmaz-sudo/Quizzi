@@ -14,6 +14,10 @@ sealed class RoomState {
     data object Countdown : RoomState()
 
     @Serializable
+    @SerialName("Pausing")
+    data object Pausing : RoomState()
+
+    @Serializable
     @SerialName("Playing")
     data object Playing : RoomState()
 

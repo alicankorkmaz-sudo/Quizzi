@@ -63,7 +63,7 @@ sealed class ServerSocketMessage {
     @Serializable
     @SerialName("GameOver")
     data class GameOver(
-        val winnerPlayerId: String
+        val winnerPlayerId: String?
     ) : ServerSocketMessage()
 
     @Serializable
@@ -93,8 +93,7 @@ sealed class ServerSocketMessage {
     @Serializable
     @SerialName("PlayerDisconnected")
     data class PlayerDisconnected(
-        val playerId: String,
-        val playerName: String
+        val playerId: String
     ) : ServerSocketMessage()
 
     @Serializable

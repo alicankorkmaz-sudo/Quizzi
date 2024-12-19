@@ -1,5 +1,6 @@
 package service.internal
 
+import domain.RoomEvent
 import exception.RoomNotFound
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -7,12 +8,12 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import model.GameRoom
 import model.Player
-import model.ResistanceGame
 import response.DisconnectedPlayer
 import response.ServerSocketMessage
 import service.GameFactory
 import service.PlayerManagerService
 import service.SessionManagerService
+import state.RoomState
 import java.util.*
 
 /**
@@ -52,10 +53,6 @@ class RoomService {
 
     suspend fun cleanupRoom(room: GameRoom) {
         room.getPlayers().forEach { player -> SessionManagerService.INSTANCE.removePlayerSession(player.id) }
-        // Oda verilerini temizle
-        if (room.game.rounds.size > 0) {
-            room.game.rounds.filter { r -> r.job?.isActive == true }.forEach { r -> r.job?.cancel() }
-        }
         rooms.remove(room.id)
     }
 
@@ -64,50 +61,22 @@ class RoomService {
             val roomId = getRoomIdByPlayerId(disconnectedPlayerId)
             val room = getRoomById(roomId)
 
-            val disconnectedPlayer = PlayerManagerService.INSTANCE.getPlayer(disconnectedPlayerId)
-
-            val resistanceGame = room.game as ResistanceGame
-
-            val roundEndMessage = ServerSocketMessage.RoundEnded(
-                cursorPosition = resistanceGame.cursorPosition,
-                correctAnswer = room.game.getLastRound().question.answer,
-                winnerPlayerId = null
-            )
-            room.broadcast(roundEndMessage)
-
-            //room.roomEnumState = RoomEnumState.PAUSED
-            room.broadcastRoomState()
+            room.handleEvent(RoomEvent.Disconnected(disconnectedPlayerId))
 
             disconnectedPlayers[disconnectedPlayerId] = DisconnectedPlayer(
                 playerId = disconnectedPlayerId,
-                playerName = disconnectedPlayer.name,
                 roomId = roomId
             )
-            room.removePlayer(disconnectedPlayer.id)
             playerToRoom.remove(disconnectedPlayerId)
-
-            if (room.getPlayerCount() == 0) {
-                cleanupRoom(room)
-                return
-            }
-
-            val disconnectMessage = ServerSocketMessage.PlayerDisconnected(
-                playerId = disconnectedPlayer.id,
-                playerName = disconnectedPlayer.name
-            )
-            room.broadcast(disconnectMessage)
-
-            room.game.rounds.filter { r -> r.job?.isActive == true }.forEach { r -> r.job?.cancel() }
-            room.game.rounds.removeAt(room.game.rounds.size - 1)
 
             CoroutineScope(Dispatchers.Default).launch {
                 delay(30000)
-                // if (room.roomEnumState == RoomEnumState.PAUSED) {
-                disconnectedPlayers.remove(disconnectedPlayerId)
-                println("Player $disconnectedPlayerId did not reconnect within 30 seconds, cleaning up room $roomId")
-                room.broadcast(ServerSocketMessage.RoomClosed(reason = "Player disconnected for too long"))
-                cleanupRoom(room)
-                //}
+                if (room.getState() == RoomState.Pausing) {
+                    room.transitionTo(RoomState.Closing)
+                    disconnectedPlayers.remove(disconnectedPlayerId)
+                    println("Player $disconnectedPlayerId did not reconnect within 30 seconds, cleaning up room $roomId")
+                    cleanupRoom(room)
+                }
             }
         } catch (e: RoomNotFound) {
             return
