@@ -1,6 +1,6 @@
 package dto
 
-import enums.PlayerState
+import state.PlayerState
 import kotlinx.serialization.Serializable
 import model.Player
 

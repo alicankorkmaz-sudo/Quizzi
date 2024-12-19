@@ -1,5 +1,6 @@
 package model
 
+import domain.RoomEvent
 import dto.PlayerDTO
 import enums.*
 import exception.TooMuchPlayersInRoom
@@ -9,6 +10,9 @@ import kotlinx.serialization.Serializable
 import response.ServerSocketMessage
 import service.RoomBroadcastService
 import service.RoomManagerService.Companion.COUNTDOWN_TIME
+import state.GameState
+import state.PlayerState
+import state.RoomState
 import java.util.*
 
 @Serializable
@@ -33,11 +37,13 @@ data class GameRoom(
                     throw IllegalStateException("Invalid transition from Countdown to $newState")
                 }
             }
+
             RoomState.Playing -> {
                 if (newState is RoomState.Countdown) {
                     throw IllegalStateException("Invalid transition from Playing to $newState")
                 }
             }
+
             RoomState.Closed -> {
                 if (newState is RoomState.Countdown || newState is RoomState.Playing) {
                     throw IllegalStateException("Invalid transition from Closed to $newState")
@@ -48,6 +54,15 @@ data class GameRoom(
         onStateChanged(newState)
     }
 
+    suspend fun handleEvent(event: RoomEvent) {
+        when (state) {
+            RoomState.Closed -> TODO()
+            RoomState.Countdown -> TODO()
+            RoomState.Playing -> TODO()
+            RoomState.Waiting -> TODO()
+        }
+    }
+
     private suspend fun onStateChanged(newState: RoomState) {
         when (newState) {
             RoomState.Waiting -> TODO()
@@ -55,12 +70,23 @@ data class GameRoom(
                 countdownBeforeStart()
                 transitionTo(RoomState.Playing)
             }
+
             RoomState.Playing -> {
                 gameScope.launch {
-                    game.transitionTo(GameState.Start)
+                    game.transitionTo(GameState.Playing)
                 }
             }
+
             RoomState.Closed -> TODO()
+        }
+    }
+
+    private suspend fun onProcessEvent(event: RoomEvent) {
+        when (event) {
+            RoomEvent.Disconnected -> TODO()
+            RoomEvent.Joined -> TODO()
+            RoomEvent.Ready -> TODO()
+            RoomEvent.Rejoined -> TODO()
         }
     }
 

@@ -1,12 +1,17 @@
 package model
 
 import data.QuestionDatabase
+import domain.GameEvent
+import domain.RoundEvent
 import dto.PlayerDTO
-import enums.GameState
-import enums.RoundState
-import kotlinx.coroutines.*
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import response.ServerSocketMessage
 import service.RoomBroadcastService
+import state.GameState
+import state.RoundState
 import kotlin.coroutines.cancellation.CancellationException
 
 /**
@@ -25,38 +30,59 @@ class ResistanceGame(
         private const val MAX_PLAYERS = 2
     }
 
-    private var state: GameState = GameState.Start
+    private var state: GameState = GameState.Idle
 
     override suspend fun transitionTo(newState: GameState) {
         when (state) {
-            GameState.Start -> {}
-            GameState.RoundStart -> {
-                if (newState is GameState.Start) {
+            GameState.Idle -> {
+                if (newState is GameState.Over) {
+                    throw IllegalStateException("Invalid transition from Idle to $newState")
+                }
+            }
+            GameState.Playing -> {
+                if (newState is GameState.Idle) {
                     throw IllegalStateException("Invalid transition from Playing to $newState")
                 }
             }
-            is GameState.RoundAnswered -> {
-                if (newState is GameState.Start) {
-                    throw IllegalStateException("Invalid transition from Playing to $newState")
+            GameState.Over -> {
+                if (newState !is GameState.Over) {
+                    throw IllegalStateException("Invalid transition from Idle to $newState")
                 }
             }
-            GameState.RoundEnd -> {
-                if (newState is GameState.Start) {
-                    throw IllegalStateException("Invalid transition from Playing to $newState")
-                }
-            }
-            GameState.Over -> TODO()
         }
         state = newState
         onStateChanged(newState)
     }
 
+    override suspend fun handleEvent(event: GameEvent) {
+        when (state) {
+            GameState.Idle -> {
+                throw IllegalStateException("Invalid event to $state")
+            }
+
+            GameState.Playing -> {}
+            GameState.Over -> {
+                throw IllegalStateException("Invalid event to $state")
+            }
+        }
+        onProcessEvent(event)
+    }
+
     private suspend fun onStateChanged(newState: GameState) {
         when (newState) {
-            GameState.Start -> {
-                transitionTo(GameState.RoundStart)
+            GameState.Idle -> {}
+            GameState.Playing -> {
+                handleEvent(GameEvent.RoundStarted)
             }
-            GameState.RoundStart -> {
+            GameState.Over -> {
+                rounds.forEach { round -> round.job?.cancel() }
+            }
+        }
+    }
+
+    private suspend fun onProcessEvent(event: GameEvent) {
+        when (event) {
+            GameEvent.RoundStarted -> {
                 if (gameOver()) {
                     transitionTo(GameState.Over)
                     return
@@ -81,28 +107,26 @@ class ResistanceGame(
                         val timeUpMessage = ServerSocketMessage.TimeUp(correctAnswer = getLastRound().question.answer)
                         RoomBroadcastService.INSTANCE.broadcast(roomId, timeUpMessage)
 
-                        transitionTo(GameState.RoundEnd)
+                        handleEvent(GameEvent.RoundEnded)
                     } catch (e: CancellationException) {
                         // Timer iptal edildi
                     }
                 }
             }
-            is GameState.RoundAnswered -> {
+
+            is GameEvent.RoundAnswered -> {
                 val lastRound = getLastRound()
-                lastRound.transitionTo(RoundState.Answered(newState.player, newState.answer))
+                lastRound.handleEvent(RoundEvent.Answered(event.player, event.answer))
 
                 val answerResult = ServerSocketMessage.AnswerResult(
-                    playerId = newState.player.id,
-                    answer = newState.answer,
-                    correct = lastRound.question.answer == newState.answer
+                    playerId = event.player.id,
+                    answer = event.answer,
+                    correct = lastRound.question.answer == event.answer
                 )
                 RoomBroadcastService.INSTANCE.broadcast(roomId, answerResult)
-
-                if (lastRound.getState() == RoundState.Interrupt) {
-                    transitionTo(GameState.RoundEnd)
-                }
             }
-            GameState.RoundEnd -> {
+
+            GameEvent.RoundEnded -> {
                 val roundEnded = ServerSocketMessage.RoundEnded(
                     cursorPosition = cursorPosition,
                     correctAnswer = getLastRound().question.answer,
@@ -110,15 +134,28 @@ class ResistanceGame(
                 )
                 RoomBroadcastService.INSTANCE.broadcast(roomId, roundEnded)
                 getLastRound().transitionTo(RoundState.End)
-                transitionTo(GameState.RoundStart)
+                handleEvent(GameEvent.RoundStarted)
             }
-            GameState.Over -> TODO()
         }
     }
+
+    /////////////////////////////
 
     private fun gameOver(): Boolean {
         return cursorPosition <= 0f || cursorPosition >= 1f
     }
+
+    private fun nextQuestion(): Question {
+        var randomQuestion = QuestionDatabase.getRandomQuestion(categoryId)
+
+        while (rounds.any { r -> r.question == randomQuestion }) {
+            randomQuestion = QuestionDatabase.getRandomQuestion(categoryId)
+        }
+
+        return randomQuestion
+    }
+
+    /////////////////////////////
 
     override fun calculateResult(players: MutableList<PlayerDTO>) {
         val lastRound = getLastRound()
@@ -155,15 +192,5 @@ class ResistanceGame(
 
     override fun getLastRound(): Round {
         return rounds.last()
-    }
-
-    private fun nextQuestion(): Question {
-        var randomQuestion = QuestionDatabase.getRandomQuestion(categoryId)
-
-        while (rounds.any{ r -> r.question == randomQuestion }) {
-            randomQuestion = QuestionDatabase.getRandomQuestion(categoryId)
-        }
-
-        return randomQuestion
     }
 }

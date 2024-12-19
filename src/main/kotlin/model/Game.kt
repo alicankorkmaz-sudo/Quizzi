@@ -1,7 +1,8 @@
 package model
 
+import domain.GameEvent
 import dto.PlayerDTO
-import enums.GameState
+import state.GameState
 import kotlinx.serialization.Serializable
 import java.util.*
 
@@ -16,6 +17,8 @@ abstract class Game(
 ) {
 
     abstract suspend fun transitionTo(newState: GameState)
+
+    abstract suspend fun handleEvent(event: GameEvent)
 
     abstract fun calculateResult(players: MutableList<PlayerDTO>)
 

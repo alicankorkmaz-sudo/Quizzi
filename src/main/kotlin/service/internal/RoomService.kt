@@ -1,6 +1,6 @@
 package service.internal
 
-import enums.PlayerState
+import state.PlayerState
 import enums.RoomEnumState
 import exception.BusinessError
 import exception.RoomNotFound

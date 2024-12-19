@@ -1,10 +1,11 @@
 package model
 
-import enums.RoundState
+import domain.RoundEvent
 import exception.AlreadyAnswered
 import exception.WrongCommandWrongTime
 import kotlinx.coroutines.Job
 import kotlinx.serialization.Serializable
+import state.RoundState
 import java.util.*
 
 /**
@@ -26,15 +27,15 @@ data class Round(
     suspend fun transitionTo(newState: RoundState) {
         when (state) {
             RoundState.Start -> {}
-            is RoundState.Answered -> {}
-            RoundState.End -> {
-                if (newState is RoundState.Answered) {
-                    throw IllegalStateException("Invalid transition from End to $newState")
-                }
-            }
             RoundState.Interrupt -> {
                 if (newState is RoundState.End) {
                     throw IllegalStateException("Invalid transition from Interrupt to $newState")
+                }
+            }
+
+            RoundState.End -> {
+                if (newState is RoundState.Start) {
+                    throw IllegalStateException("Invalid transition from End to $newState")
                 }
             }
         }
@@ -42,33 +43,60 @@ data class Round(
         onStateChanged(newState)
     }
 
+    suspend fun handleEvent(event: RoundEvent) {
+        when (state) {
+            RoundState.Start -> {}
+            RoundState.Interrupt -> {
+                if (event is RoundEvent.Answered) {
+                    throw IllegalStateException("Invalid event to $state")
+                }
+            }
+
+            RoundState.End -> {
+                if (event is RoundEvent.Answered) {
+                    throw IllegalStateException("Invalid event to $state")
+                }
+            }
+        }
+        onProcessEvent(event)
+    }
+
     private suspend fun onStateChanged(newState: RoundState) {
         when (newState) {
             RoundState.Start -> {}
-            is RoundState.Answered -> {
-                playerAnswered(newState.player, newState.answer)
+            RoundState.Interrupt -> {
+                job?.cancel()
+                transitionTo(RoundState.End)
             }
+
             RoundState.End -> job?.join()
-            RoundState.Interrupt -> job?.cancel()
         }
     }
 
-    private suspend fun playerAnswered(player: Player, answer: Int) {
+    private suspend fun onProcessEvent(event: RoundEvent) {
+        when (event) {
+            is RoundEvent.Answered -> {
+                playerAnswered(event.player, event.answer)
+                if (isRoundOver()) {
+                    transitionTo(RoundState.Interrupt)
+                }
+            }
+        }
+    }
+
+    ///////////////////////////////
+
+    private fun playerAnswered(player: Player, answer: Int) {
         synchronized(playerAnswers) {
             // round bittiyse gec gelen cevabi handle etme
             if (job?.isActive != true) {
                 throw WrongCommandWrongTime()
             }
-
             //hali hazirda dogru yanit varsa ikinci yaniti handle etme
             if (hasCorrectAnswer()) {
                 throw AlreadyAnswered()
             }
             playerAnswers.add(PlayerAnswer(player, answer, question.answer == answer))
-        }
-
-        if (isRoundOver()) {
-            transitionTo(RoundState.Interrupt)
         }
     }
 
@@ -76,18 +104,18 @@ data class Round(
         return hasCorrectAnswer() || (isAllPlayersAnswered(playerCount) && !hasCorrectAnswer())
     }
 
-    ////////////////////////
-
-    fun roundWinnerPlayer(): Player? {
-        return playerAnswers.find { it.correct }?.player
-    }
-
-
     private fun hasCorrectAnswer(): Boolean {
         return playerAnswers.any { it.correct }
     }
 
     private fun isAllPlayersAnswered(playerCount: Int): Boolean {
         return playerAnswers.size == playerCount
+    }
+
+    ////////////////////////
+    ////PUBLIC
+
+    fun roundWinnerPlayer(): Player? {
+        return playerAnswers.find { it.correct }?.player
     }
 }

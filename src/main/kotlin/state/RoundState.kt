@@ -1,4 +1,4 @@
-package enums
+package state
 
 import kotlinx.serialization.Serializable
 import model.Player
@@ -7,8 +7,6 @@ import model.Player
 sealed class RoundState {
     @Serializable
     data object Start : RoundState()
-    @Serializable
-    data class Answered(val player: Player, val answer: Int) : RoundState()
     @Serializable
     data object Interrupt : RoundState()
     @Serializable
