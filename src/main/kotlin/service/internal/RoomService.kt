@@ -68,6 +68,7 @@ class RoomService {
             try {
                 room.handleEvent(RoomEvent.Disconnected(disconnectedPlayerId))
             } catch (_: RoomIsEmpty) {
+                cleanupRoom(room)
                 return
             }
 
