@@ -12,6 +12,14 @@ data class Player(val id: String, val name: String, val avatarUrl: String) {
         return PlayerDTO(this)
     }
 
+    fun toPlayerInRoom(index: Int): PlayerInRoom {
+        return PlayerInRoom(this, index)
+    }
+
+    fun toPlayerInGame(index: Int): PlayerInGame {
+        return PlayerInGame(this, index)
+    }
+
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (other == null || javaClass != other.javaClass) return false

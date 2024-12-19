@@ -11,10 +11,10 @@ class GameFactory private constructor() {
         val INSTANCE: GameFactory by lazy(LazyThreadSafetyMode.SYNCHRONIZED) { GameFactory() }
     }
 
-    fun createGame(id: String, categoryId: Int, type: String): Game {
+    fun createGame(id: String, categoryId: Int, type: String, roomId: String): Game {
         return when(type) {
-            "ResistanceGame" -> ResistanceGame(id, categoryId)
-            else -> ResistanceGame(id, categoryId)
+            "ResistanceGame" -> ResistanceGame(id, categoryId, roomId)
+            else -> ResistanceGame(id, categoryId, roomId)
         }
     }
 
