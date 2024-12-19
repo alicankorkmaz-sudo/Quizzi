@@ -44,6 +44,7 @@ data class GameRoom(
                     throw IllegalStateException("Invalid transition from Playing to $newState")
                 }
             }
+
             RoomState.Playing -> {
                 if (newState is RoomState.Countdown) {
                     throw IllegalStateException("Invalid transition from Playing to $newState")
@@ -86,6 +87,7 @@ data class GameRoom(
     }
 
     private suspend fun onStateChanged(newState: RoomState) {
+        broadcastRoomState()
         when (newState) {
             RoomState.Waiting -> {}
             RoomState.Countdown -> {
@@ -93,7 +95,10 @@ data class GameRoom(
                 transitionTo(RoomState.Playing)
             }
 
-            RoomState.Pausing -> {}
+            RoomState.Pausing -> {
+                game.transitionTo(GameState.Pause)
+            }
+
             RoomState.Playing -> {
                 gameScope.launch {
                     game.transitionTo(GameState.Playing)
@@ -104,7 +109,6 @@ data class GameRoom(
                 game.transitionTo(GameState.Over)
             }
         }
-        broadcastRoomState()
     }
 
     private suspend fun onProcessEvent(event: RoomEvent) {
@@ -124,7 +128,6 @@ data class GameRoom(
 
             is RoomEvent.Disconnected -> {
                 removePlayer(event.playerId)
-                game.handleEvent(GameEvent.PlayerDisconnected)
 
                 val disconnectMessage = ServerSocketMessage.PlayerDisconnected(
                     playerId = event.playerId

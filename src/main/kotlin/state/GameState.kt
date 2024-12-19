@@ -8,6 +8,9 @@ sealed class GameState {
     data object Idle : GameState()
 
     @Serializable
+    data object Pause : GameState()
+
+    @Serializable
     data object Playing : GameState()
 
     @Serializable

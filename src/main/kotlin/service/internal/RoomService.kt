@@ -12,6 +12,7 @@ import response.DisconnectedPlayer
 import response.ServerSocketMessage
 import service.GameFactory
 import service.PlayerManagerService
+import service.RoomBroadcastService
 import service.SessionManagerService
 import state.RoomState
 import java.util.*
@@ -53,6 +54,7 @@ class RoomService {
 
     suspend fun cleanupRoom(room: GameRoom) {
         room.getPlayers().forEach { player -> SessionManagerService.INSTANCE.removePlayerSession(player.id) }
+        RoomBroadcastService.INSTANCE.deleteRoom(room.id)
         rooms.remove(room.id)
     }
 
@@ -70,7 +72,7 @@ class RoomService {
             playerToRoom.remove(disconnectedPlayerId)
 
             CoroutineScope(Dispatchers.Default).launch {
-                delay(30000)
+                delay(20000)
                 if (room.getState() == RoomState.Pausing) {
                     room.transitionTo(RoomState.Closing)
                     disconnectedPlayers.remove(disconnectedPlayerId)

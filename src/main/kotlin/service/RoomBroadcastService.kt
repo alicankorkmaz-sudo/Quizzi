@@ -1,6 +1,7 @@
 package service
 
 import io.ktor.websocket.*
+import kotlinx.coroutines.isActive
 import kotlinx.serialization.json.Json
 import response.ServerSocketMessage
 import java.util.*
@@ -21,9 +22,15 @@ class RoomBroadcastService private constructor() {
         roomSessions.computeIfAbsent(roomId) { mutableListOf() }.add(session)
     }
 
+    fun deleteRoom(roomId: String) {
+        roomSessions.remove(roomId)
+    }
+
     suspend fun broadcast(roomId: String, message: ServerSocketMessage) {
         roomSessions[roomId]?.forEach { session ->
-            session.send(Frame.Text(json.encodeToString(ServerSocketMessage.serializer(), message)))
+            if (session.isActive) {
+                session.send(Frame.Text(json.encodeToString(ServerSocketMessage.serializer(), message)))
+            }
         }
     }
 }

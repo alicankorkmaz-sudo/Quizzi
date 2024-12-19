@@ -82,7 +82,11 @@ class MessageHandler private constructor() {
     }
 
     suspend fun handleDisconnect(playerId: String) {
-        SessionManagerService.INSTANCE.removePlayerSession(playerId)
-        RoomManagerService.INSTANCE.playerDisconnected(playerId)
+        try {
+            SessionManagerService.INSTANCE.removePlayerSession(playerId)
+            RoomManagerService.INSTANCE.playerDisconnected(playerId)
+        } catch (e: BusinessError) {
+            println("Business error ${e.message}")
+        }
     }
 }

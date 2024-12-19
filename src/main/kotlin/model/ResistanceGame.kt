@@ -47,6 +47,7 @@ class ResistanceGame(
                 }
             }
 
+            GameState.Pause -> {}
             GameState.Over -> {
                 if (newState !is GameState.Over) {
                     throw IllegalStateException("Invalid transition from Idle to $newState")
@@ -64,9 +65,15 @@ class ResistanceGame(
             }
 
             GameState.Playing -> {}
+            GameState.Pause -> {
+                if (event is GameEvent.RoundStarted) {
+                    throw WrongCommandWrongTime()
+                }
+            }
             GameState.Over -> {
                 throw WrongCommandWrongTime()
             }
+
         }
         onProcessEvent(event)
     }
@@ -76,6 +83,11 @@ class ResistanceGame(
             GameState.Idle -> {}
             GameState.Playing -> {
                 handleEvent(GameEvent.RoundStarted)
+            }
+
+            GameState.Pause -> {
+                getLastRound().transitionTo(RoundState.Interrupt)
+                //rounds.removeAt(rounds.size - 1) TODO gerek yok gibi
             }
 
             GameState.Over -> {
@@ -145,11 +157,6 @@ class ResistanceGame(
                 broadcast(roundEnded)
                 lastRound.transitionTo(RoundState.End)
                 handleEvent(GameEvent.RoundStarted)
-            }
-
-            is GameEvent.PlayerDisconnected -> {
-                getLastRound().transitionTo(RoundState.Interrupt)
-                //rounds.removeAt(rounds.size - 1) TODO gerek yok gibi
             }
         }
     }

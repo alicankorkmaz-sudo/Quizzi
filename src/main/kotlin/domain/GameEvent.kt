@@ -16,7 +16,4 @@ sealed class GameEvent {
 
     @Serializable
     data object RoundEnded : GameEvent()
-
-    @Serializable
-    data object PlayerDisconnected : GameEvent()
 }
