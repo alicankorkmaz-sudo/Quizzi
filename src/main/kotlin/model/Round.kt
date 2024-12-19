@@ -17,12 +17,10 @@ data class Round(
     val question: Question,
     val playerCount: Int,
     var job: Job? = null,
-    val playerAnswers: MutableList<PlayerAnswer> = Collections.synchronizedList(mutableListOf())
+    val playerAnswers: MutableSet<PlayerAnswer> = Collections.synchronizedSet(mutableSetOf())
 ) {
 
     private var state: RoundState = RoundState.Start
-
-    fun getState(): RoundState = state
 
     suspend fun transitionTo(newState: RoundState) {
         when (state) {

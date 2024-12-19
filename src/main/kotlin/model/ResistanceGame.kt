@@ -21,7 +21,7 @@ class ResistanceGame(
     id: String,
     categoryId: Int,
     whichRoomInIt: String,
-    players: MutableList<PlayerInGame> = mutableListOf(),
+    players: MutableSet<PlayerInGame> = mutableSetOf(),
     rounds: MutableList<Round> = mutableListOf(),
     var cursorPosition: Float = 0.5f
 ) : Game(id, whichRoomInIt, categoryId, players, rounds) {
@@ -80,6 +80,7 @@ class ResistanceGame(
 
             GameState.Over -> {
                 rounds.forEach { round -> round.job?.cancel() }
+                broadcast(ServerSocketMessage.GameOver(winnerPlayerId = getLastRound().roundWinnerPlayer()?.id!!))
             }
         }
     }
@@ -98,18 +99,18 @@ class ResistanceGame(
                     timeRemaining = getRoundTime(),
                     currentQuestion = getLastRound().question.toDTO()
                 )
-                RoomBroadcastService.INSTANCE.broadcast(whichRoomInIt, roundStarted)
+                broadcast(roundStarted)
                 round.job = CoroutineScope(Dispatchers.Default).launch {
                     try {
                         for (timeLeft in getRoundTime() - 1 downTo 1) {
                             delay(1000)
                             val timeUpdate = ServerSocketMessage.TimeUpdate(remaining = timeLeft)
-                            RoomBroadcastService.INSTANCE.broadcast(whichRoomInIt, timeUpdate)
+                            broadcast(timeUpdate)
                         }
                         delay(1000)
                         // Süre doldu mesajı
                         val timeUpMessage = ServerSocketMessage.TimeUp(correctAnswer = getLastRound().question.answer)
-                        RoomBroadcastService.INSTANCE.broadcast(whichRoomInIt, timeUpMessage)
+                        broadcast(timeUpMessage)
                     } catch (e: CancellationException) {
                         // Timer iptal edildi
                     }
@@ -130,18 +131,19 @@ class ResistanceGame(
                     answer = event.answer,
                     correct = lastRound.question.answer == event.answer
                 )
-                RoomBroadcastService.INSTANCE.broadcast(whichRoomInIt, answerResult)
+                broadcast(answerResult)
             }
 
             GameEvent.RoundEnded -> {
                 calculateResult()
+                val lastRound = getLastRound()
                 val roundEnded = ServerSocketMessage.RoundEnded(
                     cursorPosition = cursorPosition,
-                    correctAnswer = getLastRound().question.answer,
-                    winnerPlayerId = null
+                    correctAnswer = lastRound.question.answer,
+                    winnerPlayerId = lastRound.roundWinnerPlayer()?.id
                 )
-                RoomBroadcastService.INSTANCE.broadcast(whichRoomInIt, roundEnded)
-                getLastRound().transitionTo(RoundState.End)
+                broadcast(roundEnded)
+                lastRound.transitionTo(RoundState.End)
                 handleEvent(GameEvent.RoundStarted)
             }
         }
@@ -161,6 +163,10 @@ class ResistanceGame(
         }
 
         return randomQuestion
+    }
+
+    private suspend fun broadcast(message: ServerSocketMessage) {
+        RoomBroadcastService.INSTANCE.broadcast(whichRoomInIt, message)
     }
 
     /////////////////////////////

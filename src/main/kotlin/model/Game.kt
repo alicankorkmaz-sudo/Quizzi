@@ -13,7 +13,7 @@ abstract class Game(
     val id: String,
     val whichRoomInIt: String,
     val categoryId: Int,
-    val players: MutableList<PlayerInGame> = Collections.synchronizedList(mutableListOf()),
+    val players: MutableSet<PlayerInGame> = Collections.synchronizedSet(mutableSetOf()),
     val rounds: MutableList<Round> = Collections.synchronizedList(mutableListOf())
 ) {
 

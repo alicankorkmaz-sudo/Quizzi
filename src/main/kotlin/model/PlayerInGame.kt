@@ -1,8 +1,6 @@
 package model
 
-import dto.PlayerDTO
 import kotlinx.serialization.Serializable
-import state.PlayerState
 
 /**
  * @author guvencenanguvenal
@@ -15,7 +13,7 @@ class PlayerInGame(val id: String, val name: String, val avatarUrl: String, val 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (other == null || javaClass != other.javaClass) return false
-        val otherPlayer: PlayerDTO = other as PlayerDTO
+        val otherPlayer: PlayerInGame = other as PlayerInGame
         return otherPlayer.id == id
     }
 

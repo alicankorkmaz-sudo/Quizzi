@@ -17,7 +17,7 @@ data class GameRoom(
     val id: String,
     val name: String,
     val game: Game,
-    private val players: MutableList<PlayerInRoom> = Collections.synchronizedList(mutableListOf())
+    private val players: MutableSet<PlayerInRoom> = Collections.synchronizedSet(mutableSetOf())
 ) {
     companion object {
         const val COUNTDOWN_TIME = 3L
@@ -121,7 +121,7 @@ data class GameRoom(
 
     fun addPlayer(player: Player) {
         if (players.size >= game.maxPlayerCount()) throw TooMuchPlayersInRoom()
-        val index = players.size - 1
+        val index = players.size
         players.add(player.toPlayerInRoom(index))
         game.players.add(player.toPlayerInGame(index))
     }
@@ -140,7 +140,7 @@ data class GameRoom(
 
     fun getPlayerNames(): List<String> = players.map { it.name }
 
-    fun getPlayers(): List<PlayerInRoom> = players
+    fun getPlayers(): Set<PlayerInRoom> = players
 
     /////////////////////////////////
 
