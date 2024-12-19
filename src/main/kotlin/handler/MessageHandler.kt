@@ -60,6 +60,12 @@ class MessageHandler private constructor() {
                 is ClientSocketMessage.RejoinRoom -> {
                     val room = RoomManagerService.INSTANCE.getRoomById(clientMessage.roomId)
                     val player = PlayerManagerService.INSTANCE.getPlayer(playerId)
+
+                    RoomManagerService.INSTANCE.joinRoom(player, clientMessage.roomId)
+
+                    SessionManagerService.INSTANCE.getPlayerSession(playerId)
+                        ?.let { RoomBroadcastService.INSTANCE.subscribe(clientMessage.roomId, it) }
+
                     room.handleEvent(RoomEvent.Joined(player))
                     room.handleEvent(RoomEvent.Ready(playerId))
                 }

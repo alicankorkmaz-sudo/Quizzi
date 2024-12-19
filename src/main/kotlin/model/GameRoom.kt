@@ -1,13 +1,14 @@
 package model
 
-import domain.GameEvent
 import domain.RoomEvent
+import exception.RoomIsEmpty
 import exception.TooMuchPlayersInRoom
 import exception.WrongCommandWrongTime
 import kotlinx.coroutines.*
 import kotlinx.serialization.Serializable
 import response.ServerSocketMessage
 import service.RoomBroadcastService
+import service.RoomManagerService
 import state.GameState
 import state.PlayerState
 import state.RoomState
@@ -107,12 +108,18 @@ data class GameRoom(
 
             RoomState.Closing -> {
                 game.transitionTo(GameState.Over)
+                RoomManagerService.INSTANCE.cleanupRoom(this)
             }
         }
     }
 
     private suspend fun onProcessEvent(event: RoomEvent) {
         when (event) {
+            is RoomEvent.Created -> {
+                addPlayer(event.player)
+                broadcastRoomState()
+            }
+
             is RoomEvent.Joined -> {
                 addPlayer(event.player)
                 broadcastRoomState()
@@ -136,6 +143,7 @@ data class GameRoom(
 
                 if (players.isEmpty()) {
                     transitionTo(RoomState.Closing)
+                    throw RoomIsEmpty(id)
                 }
                 transitionTo(RoomState.Pausing)
             }
@@ -143,23 +151,6 @@ data class GameRoom(
     }
 
     /////////////////////////////////
-
-    fun addPlayer(player: Player) {
-        if (players.size >= game.maxPlayerCount()) throw TooMuchPlayersInRoom()
-        val index = players.size
-        players.add(player.toPlayerInRoom(index))
-        game.players.add(player.toPlayerInGame(index))
-    }
-
-    fun removePlayer(playerId: String) {
-        players.removeIf { p -> p.id == playerId }
-        game.players.removeIf { p -> p.id == playerId }
-    }
-
-    fun isAllPlayerReady(): Boolean {
-        val notReadyPlayers = players.filter { player -> player.state == PlayerState.WAIT }.size
-        return (notReadyPlayers == 0) && (game.maxPlayerCount() == players.size)
-    }
 
     fun getPlayerCount(): Int = players.size
 
@@ -169,12 +160,12 @@ data class GameRoom(
 
     /////////////////////////////////
 
-    suspend fun broadcast(message: ServerSocketMessage) {
+    private suspend fun broadcast(message: ServerSocketMessage) {
         println("Broadcasting message to room ${id}: $message")
         RoomBroadcastService.INSTANCE.broadcast(id, message)
     }
 
-    suspend fun broadcastRoomState() {
+    private suspend fun broadcastRoomState() {
         println("Broadcasting game state for room $id")
 
         val gameUpdate = ServerSocketMessage.RoomUpdate(
@@ -186,6 +177,23 @@ data class GameRoom(
 
     /////////////////////////////////
 
+    private fun addPlayer(player: Player) {
+        if (players.size >= game.maxPlayerCount()) throw TooMuchPlayersInRoom()
+        val index = players.size
+        players.add(player.toPlayerInRoom(index))
+        game.players.add(player.toPlayerInGame(index))
+    }
+
+    private fun removePlayer(playerId: String) {
+        players.removeIf { p -> p.id == playerId }
+        game.players.removeIf { p -> p.id == playerId }
+    }
+
+    private fun isAllPlayerReady(): Boolean {
+        val notReadyPlayers = players.filter { player -> player.state == PlayerState.WAIT }.size
+        return (notReadyPlayers == 0) && (game.maxPlayerCount() == players.size)
+    }
+
     private fun playerReady(playerId: String) {
         players
             .filter { player -> player.id == playerId }
@@ -194,8 +202,6 @@ data class GameRoom(
 
     private suspend fun countdownBeforeStart() {
         println("Starting countdown for room $id")
-        broadcastRoomState()
-
         for (timeLeft in COUNTDOWN_TIME downTo 1) {
             delay(1000)
             val countdownTimeUpdate = ServerSocketMessage.CountdownTimeUpdate(remaining = timeLeft)

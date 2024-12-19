@@ -50,7 +50,7 @@ class ResistanceGame(
             GameState.Pause -> {}
             GameState.Over -> {
                 if (newState !is GameState.Over) {
-                    throw IllegalStateException("Invalid transition from Idle to $newState")
+                    throw IllegalStateException("Invalid transition from Over to $newState")
                 }
             }
         }

@@ -24,11 +24,12 @@ class RoomManagerService private constructor() {
     suspend fun createRoom(name: String, playerId: String, gameType: String): String {
         val creatorPlayer = PlayerManagerService.INSTANCE.getPlayer(playerId)
         val room = roomService.createRoom(name, creatorPlayer, GameFactory.CategoryType.FLAGS, gameType)
-        room.broadcastRoomState()
         return room.id
     }
 
     fun joinRoom(player: Player, roomId: String): Boolean = roomService.joinRoom(player, roomId)
+
+    suspend fun cleanupRoom(room: GameRoom) = roomService.cleanupRoom(room)
 
     suspend fun playerDisconnected(playerId: String) {
         roomService.playerDisconnected(playerId)

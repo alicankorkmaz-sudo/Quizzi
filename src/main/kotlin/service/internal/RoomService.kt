@@ -1,6 +1,7 @@
 package service.internal
 
 import domain.RoomEvent
+import exception.RoomIsEmpty
 import exception.RoomNotFound
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -9,9 +10,7 @@ import kotlinx.coroutines.launch
 import model.GameRoom
 import model.Player
 import response.DisconnectedPlayer
-import response.ServerSocketMessage
 import service.GameFactory
-import service.PlayerManagerService
 import service.RoomBroadcastService
 import service.SessionManagerService
 import state.RoomState
@@ -36,13 +35,13 @@ class RoomService {
 
     fun getRoomIdByPlayerId(playerId: String) = playerToRoom[playerId] ?: throw RoomNotFound("from PlayerId")
 
-    fun createRoom(roomName: String, creator: Player, gameCategoryId: Int, gameType: String): GameRoom {
+    suspend fun createRoom(roomName: String, creator: Player, gameCategoryId: Int, gameType: String): GameRoom {
         val roomId = UUID.randomUUID().toString()
         val game = GameFactory.INSTANCE.createGame(roomId, gameCategoryId, gameType, roomId)
         val room = GameRoom(roomId, roomName, game)
-        room.addPlayer(creator)
         rooms[roomId] = room
         playerToRoom[creator.id] = roomId
+        room.handleEvent(RoomEvent.Created(creator))
         println("Room $roomId created by player ${creator.id}")
         return room
     }
@@ -53,7 +52,10 @@ class RoomService {
     }
 
     suspend fun cleanupRoom(room: GameRoom) {
-        room.getPlayers().forEach { player -> SessionManagerService.INSTANCE.removePlayerSession(player.id) }
+        room.getPlayers().forEach { player ->
+            SessionManagerService.INSTANCE.removePlayerSession(player.id)
+            playerToRoom.remove(player.id)
+        }
         RoomBroadcastService.INSTANCE.deleteRoom(room.id)
         rooms.remove(room.id)
     }
@@ -63,7 +65,11 @@ class RoomService {
             val roomId = getRoomIdByPlayerId(disconnectedPlayerId)
             val room = getRoomById(roomId)
 
-            room.handleEvent(RoomEvent.Disconnected(disconnectedPlayerId))
+            try {
+                room.handleEvent(RoomEvent.Disconnected(disconnectedPlayerId))
+            } catch (_: RoomIsEmpty) {
+                return
+            }
 
             disconnectedPlayers[disconnectedPlayerId] = DisconnectedPlayer(
                 playerId = disconnectedPlayerId,
@@ -73,12 +79,12 @@ class RoomService {
 
             CoroutineScope(Dispatchers.Default).launch {
                 delay(20000)
-                if (room.getState() == RoomState.Pausing) {
+                if (room.getState() is RoomState.Pausing) {
                     room.transitionTo(RoomState.Closing)
-                    disconnectedPlayers.remove(disconnectedPlayerId)
                     println("Player $disconnectedPlayerId did not reconnect within 30 seconds, cleaning up room $roomId")
                     cleanupRoom(room)
                 }
+                disconnectedPlayers.remove(disconnectedPlayerId)
             }
         } catch (e: RoomNotFound) {
             return

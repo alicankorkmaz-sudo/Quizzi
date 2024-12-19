@@ -8,6 +8,10 @@ import model.Player
  */
 @Serializable
 sealed class RoomEvent {
+
+    @Serializable
+    data class Created(val player: Player) : RoomEvent()
+
     @Serializable
     data class Joined(val player: Player) : RoomEvent()
 
