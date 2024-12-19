@@ -29,7 +29,7 @@ class RoomManagerService private constructor() {
 
     fun joinRoom(player: Player, roomId: String): Boolean = roomService.joinRoom(player, roomId)
 
-    suspend fun cleanupRoom(room: GameRoom) = roomService.cleanupRoom(room)
+    suspend fun closeRoom(room: GameRoom) = roomService.closeRoom(room)
 
     suspend fun playerDisconnected(playerId: String) {
         roomService.playerDisconnected(playerId)

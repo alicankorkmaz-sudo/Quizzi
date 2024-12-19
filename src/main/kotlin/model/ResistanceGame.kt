@@ -34,6 +34,10 @@ class ResistanceGame(
     private var state: GameState = GameState.Idle
 
     override suspend fun transitionTo(newState: GameState) {
+        if (state == newState) {
+            return
+        }
+
         when (state) {
             GameState.Idle -> {
                 if (newState is GameState.Over) {

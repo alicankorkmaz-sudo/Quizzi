@@ -32,6 +32,10 @@ data class GameRoom(
     fun getState(): RoomState = state
 
     suspend fun transitionTo(newState: RoomState) {
+        if (state == newState) {
+            return
+        }
+
         when (state) {
             RoomState.Waiting -> {}
             RoomState.Countdown -> {
@@ -108,7 +112,7 @@ data class GameRoom(
 
             RoomState.Closing -> {
                 game.transitionTo(GameState.Over)
-                RoomManagerService.INSTANCE.cleanupRoom(this)
+                RoomManagerService.INSTANCE.closeRoom(this)
             }
         }
     }

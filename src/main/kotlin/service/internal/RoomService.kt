@@ -51,7 +51,8 @@ class RoomService {
         return true
     }
 
-    suspend fun cleanupRoom(room: GameRoom) {
+    suspend fun closeRoom(room: GameRoom) {
+        room.transitionTo(RoomState.Closing)
         room.getPlayers().forEach { player ->
             SessionManagerService.INSTANCE.removePlayerSession(player.id)
             playerToRoom.remove(player.id)
@@ -68,7 +69,7 @@ class RoomService {
             try {
                 room.handleEvent(RoomEvent.Disconnected(disconnectedPlayerId))
             } catch (_: RoomIsEmpty) {
-                cleanupRoom(room)
+                closeRoom(room)
                 return
             }
 
@@ -81,9 +82,8 @@ class RoomService {
             CoroutineScope(Dispatchers.Default).launch {
                 delay(20000)
                 if (room.getState() is RoomState.Pausing) {
-                    room.transitionTo(RoomState.Closing)
                     println("Player $disconnectedPlayerId did not reconnect within 30 seconds, cleaning up room $roomId")
-                    cleanupRoom(room)
+                    closeRoom(room)
                 }
                 disconnectedPlayers.remove(disconnectedPlayerId)
             }
