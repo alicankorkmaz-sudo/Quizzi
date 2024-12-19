@@ -3,6 +3,7 @@ package service
 import dto.GameRoomDTO
 import exception.RoomNotFound
 import model.GameRoom
+import model.Player
 import response.ServerSocketMessage
 import service.internal.RoomService
 import java.util.*
@@ -31,6 +32,8 @@ class RoomManagerService private constructor() {
         broadcastRoomState(roomId)
         return roomId
     }
+
+    fun joinRoom(player: Player, roomId: String): Boolean = roomService.joinRoom(player, roomId)
 
     suspend fun playerDisconnected(playerId: String) {
         roomService.playerDisconnected(playerId)

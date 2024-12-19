@@ -69,7 +69,11 @@ data class Round(
                 transitionTo(RoundState.End)
             }
 
-            RoundState.End -> job?.join()
+            RoundState.End -> {
+                if (job != null && job!!.isActive) {
+                    job?.join()
+                }
+            }
         }
     }
 

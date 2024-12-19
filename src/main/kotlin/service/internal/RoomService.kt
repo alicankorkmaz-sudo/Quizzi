@@ -51,13 +51,6 @@ class RoomService {
     }
 
     fun joinRoom(player: Player, roomId: String): Boolean {
-        val room = rooms[roomId] ?: throw RoomNotFound(roomId)
-        try {
-            room.addPlayer(player)
-        } catch (e: BusinessError) {
-            print(e.message)
-            return false
-        }
         playerToRoom[player.id] = roomId
         return true
     }

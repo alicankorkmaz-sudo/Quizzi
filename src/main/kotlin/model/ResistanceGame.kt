@@ -4,10 +4,7 @@ import data.QuestionDatabase
 import domain.GameEvent
 import domain.RoundEvent
 import dto.PlayerDTO
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.*
 import response.ServerSocketMessage
 import service.RoomBroadcastService
 import state.GameState
@@ -39,11 +36,13 @@ class ResistanceGame(
                     throw IllegalStateException("Invalid transition from Idle to $newState")
                 }
             }
+
             GameState.Playing -> {
                 if (newState is GameState.Idle) {
                     throw IllegalStateException("Invalid transition from Playing to $newState")
                 }
             }
+
             GameState.Over -> {
                 if (newState !is GameState.Over) {
                     throw IllegalStateException("Invalid transition from Idle to $newState")
@@ -74,6 +73,7 @@ class ResistanceGame(
             GameState.Playing -> {
                 handleEvent(GameEvent.RoundStarted)
             }
+
             GameState.Over -> {
                 rounds.forEach { round -> round.job?.cancel() }
             }
@@ -106,10 +106,13 @@ class ResistanceGame(
                         // Süre doldu mesajı
                         val timeUpMessage = ServerSocketMessage.TimeUp(correctAnswer = getLastRound().question.answer)
                         RoomBroadcastService.INSTANCE.broadcast(roomId, timeUpMessage)
-
-                        handleEvent(GameEvent.RoundEnded)
                     } catch (e: CancellationException) {
                         // Timer iptal edildi
+                    }
+                }
+                round.job?.invokeOnCompletion {
+                    CoroutineScope(Dispatchers.Default).launch {
+                        handleEvent(GameEvent.RoundEnded)
                     }
                 }
             }
