@@ -2,14 +2,12 @@ package model
 
 import domain.RoomEvent
 import dto.PlayerDTO
-import enums.*
+import enums.RoomEnumState
 import exception.TooMuchPlayersInRoom
-import exception.WrongCommandWrongTime
 import kotlinx.coroutines.*
 import kotlinx.serialization.Serializable
 import response.ServerSocketMessage
 import service.RoomBroadcastService
-import service.RoomManagerService.Companion.COUNTDOWN_TIME
 import state.GameState
 import state.PlayerState
 import state.RoomState
@@ -23,11 +21,13 @@ data class GameRoom(
     val players: MutableList<PlayerDTO> = Collections.synchronizedList(mutableListOf()),
     var roomEnumState: RoomEnumState = RoomEnumState.WAITING,
 ) {
+    companion object{
+        const val COUNTDOWN_TIME = 3L
+    }
+
     private val gameScope = CoroutineScope(Dispatchers.Default + Job())
 
     private var state: RoomState = RoomState.Waiting
-
-    fun getState(): RoomState = state
 
     suspend fun transitionTo(newState: RoomState) {
         when (state) {
@@ -44,7 +44,7 @@ data class GameRoom(
                 }
             }
 
-            RoomState.Closed -> {
+            RoomState.Closing -> {
                 if (newState is RoomState.Countdown || newState is RoomState.Playing) {
                     throw IllegalStateException("Invalid transition from Closed to $newState")
                 }
@@ -56,16 +56,29 @@ data class GameRoom(
 
     suspend fun handleEvent(event: RoomEvent) {
         when (state) {
-            RoomState.Closed -> TODO()
-            RoomState.Countdown -> TODO()
-            RoomState.Playing -> TODO()
-            RoomState.Waiting -> TODO()
+            RoomState.Waiting -> {}
+            RoomState.Countdown -> {
+                if (event !is RoomEvent.Disconnected) {
+                    throw IllegalStateException("Invalid event on $state")
+                }
+            }
+
+            RoomState.Playing -> {
+                if (event !is RoomEvent.Disconnected) {
+                    throw IllegalStateException("Invalid event on $state")
+                }
+            }
+
+            RoomState.Closing -> {
+                throw IllegalStateException("Invalid event on $state")
+            }
         }
+        onProcessEvent(event)
     }
 
     private suspend fun onStateChanged(newState: RoomState) {
         when (newState) {
-            RoomState.Waiting -> TODO()
+            RoomState.Waiting -> {}
             RoomState.Countdown -> {
                 countdownBeforeStart()
                 transitionTo(RoomState.Playing)
@@ -77,42 +90,37 @@ data class GameRoom(
                 }
             }
 
-            RoomState.Closed -> TODO()
+            RoomState.Closing -> {}
         }
+        broadcastRoomState()
     }
 
     private suspend fun onProcessEvent(event: RoomEvent) {
         when (event) {
-            RoomEvent.Disconnected -> TODO()
-            RoomEvent.Joined -> TODO()
-            RoomEvent.Ready -> TODO()
-            RoomEvent.Rejoined -> TODO()
+            is RoomEvent.Joined -> {
+                addPlayer(event.player)
+                broadcastRoomState()
+            }
+
+            RoomEvent.Rejoined -> {}
+            is RoomEvent.Ready -> {
+                playerReady(event.playerId)
+                if (isAllPlayerReady()) {
+                    transitionTo(RoomState.Playing)
+                }
+            }
+
+            is RoomEvent.Disconnected -> {
+                removePlayer(event.playerId)
+                transitionTo(RoomState.Waiting)
+            }
         }
     }
 
-    suspend fun playerAnswered(playerId: String, answer: Int) {
-        if (roomEnumState != RoomEnumState.PLAYING) throw WrongCommandWrongTime()
-        val lastRound = game.getLastRound()
-        val player = room.players.find { it.id == playerId } ?: return
-
-        lastRound.playerAnswered(Player(player), answer)
-        val roundOver = lastRound.isRoundOver(room.game.maxPlayerCount())
-
-        val answerResult = ServerSocketMessage.AnswerResult(
-            playerId = player.id,
-            answer = answer,
-            correct = lastRound.question.answer == answer
-        )
-        room.broadcast(answerResult)
-
-        if (roundOver) {
-            interruptRound(room)
-        }
-    }
+    /////////////////////////////////
 
     fun addPlayer(player: Player) {
         if (players.size >= game.maxPlayerCount()) throw TooMuchPlayersInRoom()
-        if (roomEnumState != RoomEnumState.WAITING && roomEnumState != RoomEnumState.PAUSED) throw WrongCommandWrongTime()
         players.add(player.toDTO())
     }
 
@@ -124,6 +132,14 @@ data class GameRoom(
         val notReadyPlayers = players.filter { player -> player.state == PlayerState.WAIT }.size
         return (notReadyPlayers == 0) && (game.maxPlayerCount() == players.size)
     }
+
+    fun playerReady(playerId: String) {
+        players
+            .filter { player -> player.id == playerId }
+            .forEach { player -> player.state = PlayerState.READY }
+    }
+
+    /////////////////////////////////
 
     suspend fun broadcast(message: ServerSocketMessage) {
         println("Broadcasting message to room ${id}: $message")
@@ -139,6 +155,8 @@ data class GameRoom(
         )
         broadcast(gameUpdate)
     }
+
+    /////////////////////////////////
 
     private suspend fun countdownBeforeStart() {
         println("Starting countdown for room $id")

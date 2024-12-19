@@ -14,5 +14,5 @@ sealed class RoomState {
     data object Playing : RoomState()
 
     @Serializable
-    data object Closed : RoomState()
+    data object Closing : RoomState()
 }

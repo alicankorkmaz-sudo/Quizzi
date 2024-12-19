@@ -1,6 +1,7 @@
 package domain
 
 import kotlinx.serialization.Serializable
+import model.Player
 
 /**
  * @author guvencenanguvenal
@@ -8,14 +9,14 @@ import kotlinx.serialization.Serializable
 @Serializable
 sealed class RoomEvent {
     @Serializable
-    data object Joined : RoomEvent()
+    data class Joined(val player: Player) : RoomEvent()
 
     @Serializable
     data object Rejoined : RoomEvent()
 
     @Serializable
-    data object Ready : RoomEvent()
+    data class Ready(val playerId: String) : RoomEvent()
 
     @Serializable
-    data object Disconnected : RoomEvent()
+    data class Disconnected(val playerId: String) : RoomEvent()
 }

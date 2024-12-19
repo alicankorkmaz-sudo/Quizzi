@@ -20,9 +20,9 @@ import kotlin.coroutines.cancellation.CancellationException
 class ResistanceGame(
     id: String,
     categoryId: Int,
+    private val roomId: String,
     rounds: MutableList<Round> = mutableListOf(),
-    var cursorPosition: Float = 0.5f,
-    private val roomId: String
+    var cursorPosition: Float = 0.5f
 ) : Game(id, categoryId, rounds) {
 
     companion object {
