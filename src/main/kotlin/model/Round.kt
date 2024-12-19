@@ -27,12 +27,7 @@ data class Round(
     suspend fun transitionTo(newState: RoundState) {
         when (state) {
             RoundState.Start -> {}
-            RoundState.Interrupt -> {
-                if (newState is RoundState.End) {
-                    throw IllegalStateException("Invalid transition from Interrupt to $newState")
-                }
-            }
-
+            RoundState.Interrupt -> {}
             RoundState.End -> {
                 if (newState is RoundState.Start) {
                     throw IllegalStateException("Invalid transition from End to $newState")

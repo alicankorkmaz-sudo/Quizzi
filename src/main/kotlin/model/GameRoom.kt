@@ -21,7 +21,7 @@ data class GameRoom(
     val players: MutableList<PlayerDTO> = Collections.synchronizedList(mutableListOf()),
     var roomEnumState: RoomEnumState = RoomEnumState.WAITING,
 ) {
-    companion object{
+    companion object {
         const val COUNTDOWN_TIME = 3L
     }
 
@@ -106,7 +106,7 @@ data class GameRoom(
             is RoomEvent.Ready -> {
                 playerReady(event.playerId)
                 if (isAllPlayerReady()) {
-                    transitionTo(RoomState.Playing)
+                    transitionTo(RoomState.Countdown)
                 }
             }
 
