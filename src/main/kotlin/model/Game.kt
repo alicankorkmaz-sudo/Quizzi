@@ -27,7 +27,5 @@ abstract class Game(
 
     abstract fun getRoundTime(): Long
 
-    abstract suspend fun nextRound(): Round
-
     abstract fun getLastRound(): Round
 }

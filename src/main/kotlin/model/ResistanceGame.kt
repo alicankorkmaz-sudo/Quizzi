@@ -160,6 +160,14 @@ class ResistanceGame(
         return cursorPosition <= 0f || cursorPosition >= 1f
     }
 
+    private suspend fun nextRound(): Round {
+        val roundNumber = rounds.size + 1
+        val round = Round(roundNumber, nextQuestion(), MAX_PLAYERS)
+        round.transitionTo(RoundState.Start)
+        rounds.add(round)
+        return round
+    }
+
     private fun nextQuestion(): Question {
         var randomQuestion = QuestionDatabase.getRandomQuestion(categoryId)
 
@@ -200,14 +208,6 @@ class ResistanceGame(
 
     override fun getRoundTime(): Long {
         return ROUND_TIME_SECONDS
-    }
-
-    override suspend fun nextRound(): Round {
-        val roundNumber = rounds.size + 1
-        val round = Round(roundNumber, nextQuestion(), MAX_PLAYERS)
-        round.transitionTo(RoundState.Start)
-        rounds.add(round)
-        return round
     }
 
     override fun getLastRound(): Round {
