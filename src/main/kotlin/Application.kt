@@ -10,6 +10,7 @@ import io.ktor.server.routing.*
 import io.ktor.server.websocket.*
 import io.ktor.websocket.*
 import kotlinx.serialization.json.Json
+import router.gameRoutes
 import router.playerRoutes
 import router.roomRoutes
 import service.PlayerManagerService
@@ -33,8 +34,8 @@ fun Application.module() {
     }
 
     install(WebSockets) {
-        pingPeriod = Duration.ofSeconds(1)
-        timeout = Duration.ofSeconds(10)
+        pingPeriod = Duration.ofSeconds(15)
+        timeout = Duration.ofSeconds(15)
         maxFrameSize = Long.MAX_VALUE
         masking = false
     }
@@ -46,6 +47,7 @@ fun Application.module() {
 
         roomRoutes()
         playerRoutes()
+        gameRoutes()
 
         webSocket("/game") {
             val playerId = call.parameters["playerId"]//call.request.headers["playerId"]

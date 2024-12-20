@@ -6,13 +6,15 @@ import kotlinx.serialization.Serializable
  * @author guvencenanguvenal
  */
 @Serializable
-data class PlayerAnswer(val player: Player, val answer: Int, val correct: Boolean) {
+class PlayerInGame(val id: String, val name: String, val avatarUrl: String, val index: Int) {
+
+    constructor(player: Player, index: Int) : this(player.id, player.name, player.avatarUrl, index)
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (other == null || javaClass != other.javaClass) return false
-        val otherPlayerAnswer: PlayerAnswer = other as PlayerAnswer
-        return otherPlayerAnswer.player == player
+        val otherPlayer: PlayerInGame = other as PlayerInGame
+        return otherPlayer.id == id
     }
 
     override fun hashCode(): Int {
