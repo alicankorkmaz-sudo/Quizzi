@@ -6,8 +6,10 @@ import exception.BusinessError
 import kotlinx.serialization.json.Json
 import request.ClientSocketMessage
 import response.ServerSocketMessage
-import service.*
-import service.internal.RoomService
+import service.PlayerManagerService
+import service.RoomBroadcastService
+import service.RoomManagerService
+import service.SessionManagerService
 
 /**
  * @author guvencenanguvenal
@@ -29,7 +31,8 @@ class MessageHandler private constructor() {
                         RoomManagerService.INSTANCE.createRoom(
                             "${player.name}'s Room",
                             playerId,
-                            GameFactory.GameType.RESISTANCE_GAME
+                            clientMessage.categoryId,
+                            clientMessage.gameType
                         )
                     val response = ServerSocketMessage.RoomCreated(
                         roomId = roomId

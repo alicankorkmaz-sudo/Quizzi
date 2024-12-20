@@ -21,9 +21,9 @@ class RoomManagerService private constructor() {
 
     fun getRoomByPlayerId(playerId: String) = roomService.getRoomByPlayerId(playerId)
 
-    suspend fun createRoom(name: String, playerId: String, gameType: String): String {
+    suspend fun createRoom(name: String, playerId: String, categoryId: Int, gameType: String): String {
         val creatorPlayer = PlayerManagerService.INSTANCE.getPlayer(playerId)
-        val room = roomService.createRoom(name, creatorPlayer, GameFactory.CategoryType.FLAGS, gameType)
+        val room = roomService.createRoom(name, creatorPlayer, categoryId, gameType)
         return room.id
     }
 
