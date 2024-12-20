@@ -23,7 +23,7 @@ class ResistanceGame(
     whichRoomInIt: String,
     players: MutableSet<PlayerInGame> = mutableSetOf(),
     rounds: MutableList<Round> = mutableListOf(),
-    var cursorPosition: Float = 0.5f
+    private var cursorPosition: Float = 0.5f
 ) : Game(id, whichRoomInIt, categoryId, players, rounds) {
 
     companion object {
