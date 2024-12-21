@@ -1,6 +1,7 @@
 package service
 
 import model.Game
+import model.ResistToTimeGame
 import model.ResistanceGame
 
 /**
@@ -18,6 +19,7 @@ class GameFactory private constructor() {
     fun createGame(id: String, categoryId: Int, type: String, roomId: String): Game {
         return when(type) {
             "ResistanceGame" -> ResistanceGame(id, categoryId, roomId)
+            "ResistToTimeGame" -> ResistToTimeGame(id, categoryId, roomId)
             else -> ResistanceGame(id, categoryId, roomId)
         }
     }

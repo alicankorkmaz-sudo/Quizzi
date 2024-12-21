@@ -59,6 +59,7 @@ class RoomService {
         }
         RoomBroadcastService.INSTANCE.deleteRoom(room.id)
         rooms.remove(room.id)
+        print("${room.id} room is cleaned!")
     }
 
     suspend fun playerDisconnected(disconnectedPlayerId: String) {

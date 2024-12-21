@@ -140,15 +140,19 @@ data class GameRoom(
             is RoomEvent.Disconnected -> {
                 removePlayer(event.playerId)
 
-                val disconnectMessage = ServerSocketMessage.PlayerDisconnected(
-                    playerId = event.playerId
-                )
-                broadcast(disconnectMessage)
-
                 if (players.isEmpty()) {
                     transitionTo(RoomState.Closing)
                     throw RoomIsEmpty(id)
                 }
+
+                if (game.getState() is GameState.Over) {
+                    return
+                }
+
+                val disconnectMessage = ServerSocketMessage.PlayerDisconnected(
+                    playerId = event.playerId
+                )
+                broadcast(disconnectMessage)
                 transitionTo(RoomState.Pausing)
             }
         }

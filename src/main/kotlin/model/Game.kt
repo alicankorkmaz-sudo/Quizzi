@@ -17,6 +17,8 @@ abstract class Game(
     val rounds: MutableList<Round> = Collections.synchronizedList(mutableListOf())
 ) {
 
+    abstract fun getState(): GameState
+
     abstract suspend fun transitionTo(newState: GameState)
 
     abstract suspend fun handleEvent(event: GameEvent)
