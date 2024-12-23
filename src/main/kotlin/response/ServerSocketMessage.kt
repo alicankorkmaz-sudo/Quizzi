@@ -5,8 +5,7 @@ import dto.QuestionDTO
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonClassDiscriminator
-import model.Player
-import enums.RoomState
+import state.RoomState
 
 /**
  * @author guvencenanguvenal
@@ -64,7 +63,7 @@ sealed class ServerSocketMessage {
     @Serializable
     @SerialName("GameOver")
     data class GameOver(
-        val winnerPlayerId: String
+        val winnerPlayerId: String?
     ) : ServerSocketMessage()
 
     @Serializable
@@ -94,8 +93,7 @@ sealed class ServerSocketMessage {
     @Serializable
     @SerialName("PlayerDisconnected")
     data class PlayerDisconnected(
-        val playerId: String,
-        val playerName: String
+        val playerId: String
     ) : ServerSocketMessage()
 
     @Serializable

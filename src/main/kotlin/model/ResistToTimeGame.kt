@@ -17,7 +17,7 @@ import kotlin.coroutines.cancellation.CancellationException
 /**
  * @author guvencenanguvenal
  */
-class ResistanceGame(
+class ResistToTimeGame(
     id: String,
     categoryId: Int,
     whichRoomInIt: String,
@@ -27,8 +27,8 @@ class ResistanceGame(
 ) : Game(id, whichRoomInIt, categoryId, players, rounds) {
 
     companion object {
-        private const val ROUND_TIME_SECONDS = 10L
-        private const val MAX_PLAYERS = 2
+        private const val ROUND_TIME_SECONDS = 3L
+        private const val MAX_PLAYERS = 1
     }
 
     private var state: GameState = GameState.Idle
@@ -56,7 +56,7 @@ class ResistanceGame(
             GameState.Pause -> {}
             GameState.Over -> {
                 if (newState !is GameState.Over) {
-                    return
+                    throw IllegalStateException("Invalid transition from Over to $newState")
                 }
             }
         }
@@ -168,6 +168,44 @@ class ResistanceGame(
         }
     }
 
+    override fun calculateResult() {
+        val lastRound = getLastRound()
+
+        val roundWinnerPlayer = lastRound.roundWinnerPlayer()
+
+        if (roundWinnerPlayer != null) {
+            val currentPosition = cursorPosition
+            val movement = -0.1f
+            val newPosition = currentPosition + movement
+            cursorPosition = when {
+                newPosition <= 0.1f -> 0f  // Sol limit
+                newPosition >= 0.9f -> 1f  // Sağ limit
+                else -> newPosition
+            }
+        } else {
+            val currentPosition = cursorPosition
+            val movement = 0.1f
+            val newPosition = currentPosition + movement
+            cursorPosition = when {
+                newPosition <= 0.1f -> 0f  // Sol limit
+                newPosition >= 0.9f -> 1f  // Sağ limit
+                else -> newPosition
+            }
+        }
+    }
+
+    override fun maxPlayerCount(): Int {
+        return MAX_PLAYERS
+    }
+
+    override fun getRoundTime(): Long {
+        return ROUND_TIME_SECONDS
+    }
+
+    override fun getLastRound(): Round {
+        return rounds.last()
+    }
+
     /////////////////////////////
 
     private fun gameOver(): Boolean {
@@ -194,37 +232,5 @@ class ResistanceGame(
 
     private suspend fun broadcast(message: ServerSocketMessage) {
         RoomBroadcastService.INSTANCE.broadcast(whichRoomInIt, message)
-    }
-
-    /////////////////////////////
-
-    override fun calculateResult() {
-        val lastRound = getLastRound()
-
-        val roundWinnerPlayer = lastRound.roundWinnerPlayer()
-
-        if (roundWinnerPlayer != null) {
-            val roundWinnerIndex = players.find { p -> p.id == roundWinnerPlayer.id }!!.index
-            val currentPosition = cursorPosition
-            val movement = if (roundWinnerIndex == 0) -0.1f else 0.1f
-            val newPosition = currentPosition + movement
-            cursorPosition = when {
-                newPosition <= 0.1f -> 0f  // Sol limit
-                newPosition >= 0.9f -> 1f  // Sağ limit
-                else -> newPosition
-            }
-        }
-    }
-
-    override fun maxPlayerCount(): Int {
-        return MAX_PLAYERS
-    }
-
-    override fun getRoundTime(): Long {
-        return ROUND_TIME_SECONDS
-    }
-
-    override fun getLastRound(): Round {
-        return rounds.last()
     }
 }

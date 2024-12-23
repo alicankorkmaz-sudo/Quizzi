@@ -1,7 +1,8 @@
 package model
 
-import dto.PlayerDTO
+import domain.GameEvent
 import kotlinx.serialization.Serializable
+import state.GameState
 import java.util.*
 
 /**
@@ -10,18 +11,23 @@ import java.util.*
 @Serializable
 abstract class Game(
     val id: String,
+    val whichRoomInIt: String,
     val categoryId: Int,
+    val players: MutableSet<PlayerInGame> = Collections.synchronizedSet(mutableSetOf()),
     val rounds: MutableList<Round> = Collections.synchronizedList(mutableListOf())
 ) {
-    abstract fun gameOver(): Boolean
 
-    abstract fun calculateResult(players: MutableList<PlayerDTO>)
+    abstract fun getState(): GameState
+
+    abstract suspend fun transitionTo(newState: GameState)
+
+    abstract suspend fun handleEvent(event: GameEvent)
+
+    abstract fun calculateResult()
 
     abstract fun maxPlayerCount(): Int
 
     abstract fun getRoundTime(): Long
-
-    abstract fun nextRound(): Round
 
     abstract fun getLastRound(): Round
 }
