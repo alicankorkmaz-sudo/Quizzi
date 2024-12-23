@@ -33,8 +33,6 @@ class RoomService {
 
     fun getRoomByPlayerId(playerId: String) = rooms[playerToRoom[playerId]] ?: throw RoomNotFound("from PlayerId")
 
-    fun getRoomIdByPlayerId(playerId: String) = playerToRoom[playerId] ?: throw RoomNotFound("from PlayerId")
-
     suspend fun createRoom(roomName: String, creator: Player, gameCategoryId: Int, gameType: String): GameRoom {
         val roomId = UUID.randomUUID().toString()
         val game = GameFactory.INSTANCE.createGame(roomId, gameCategoryId, gameType, roomId)
@@ -52,7 +50,6 @@ class RoomService {
     }
 
     suspend fun closeRoom(room: GameRoom) {
-        room.transitionTo(RoomState.Closing)
         room.getPlayers().forEach { player ->
             SessionManagerService.INSTANCE.removePlayerSession(player.id)
             playerToRoom.remove(player.id)
@@ -64,27 +61,26 @@ class RoomService {
 
     suspend fun playerDisconnected(disconnectedPlayerId: String) {
         try {
-            val roomId = getRoomIdByPlayerId(disconnectedPlayerId)
-            val room = getRoomById(roomId)
+            val room = getRoomByPlayerId(disconnectedPlayerId)
 
             try {
                 room.handleEvent(RoomEvent.Disconnected(disconnectedPlayerId))
             } catch (_: RoomIsEmpty) {
-                closeRoom(room)
+                room.transitionTo(RoomState.Closing)
                 return
             }
 
             disconnectedPlayers[disconnectedPlayerId] = DisconnectedPlayer(
                 playerId = disconnectedPlayerId,
-                roomId = roomId
+                roomId = room.id
             )
             playerToRoom.remove(disconnectedPlayerId)
 
             CoroutineScope(Dispatchers.Default).launch {
                 delay(20000)
                 if (room.getState() is RoomState.Pausing) {
-                    println("Player $disconnectedPlayerId did not reconnect within 30 seconds, cleaning up room $roomId")
-                    closeRoom(room)
+                    room.transitionTo(RoomState.Closing)
+                    println("Player $disconnectedPlayerId did not reconnect within 30 seconds, cleaning up room ${room.id}")
                 }
                 disconnectedPlayers.remove(disconnectedPlayerId)
             }
